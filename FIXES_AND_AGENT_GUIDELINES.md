@@ -230,3 +230,23 @@ New Tasks (added 2026-01-17)
 - Notes: |
   - Consider indexing/tag storage format (simple comma-separated tags or normalized tags table) depending on expected scale.
 
+
+### TASK: TASK-0013 - Scan for "coming soon" placeholders and implement sequentially
+
+- ID: TASK-0013
+- Status: in-progress
+- Priority: P0
+- Owner: unassigned
+- Created: 2026-01-17
+- Files: (codebase-wide) - search for text patterns: "coming soon", "Coming soon", "coming-soon", "coming_soon"
+- Description: |
+  Automated scan of the codebase to find UI placeholders and TODOs that show "coming soon" messages. For each placeholder found, add a task to this guidelines document and the repo todo list, then implement them one-by-one (small, incremental fixes) until all placeholders are resolved.
+- Acceptance Criteria: |
+  - A list of all found placeholders is appended to the todo list and to this document (as individual tasks or references).
+  - Each placeholder is implemented or replaced with a functioning feature, a clear roadmap task, or removed if redundant.
+  - Changes are committed with messages referencing `TASK-0013` and any created subtasks.
+- Tests/Commands: |
+  - Search (repo): `grep -R "coming soon" -n || true`
+  - Run the app locally and verify no visible "coming soon" placeholders for implemented items.
+- Notes: |
+  - Start with non-invasive UI fixes (theme toggle) and progress to feature implementations (SSH terminal, docs viewer) in separate commits.

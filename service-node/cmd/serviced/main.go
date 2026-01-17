@@ -62,6 +62,7 @@ func main() {
 	userRepo := repository.NewUserRepository(database.Pool)
 	tokenRepo := repository.NewRefreshTokenRepository(database.Pool)
 	auditRepo := repository.NewAuditLogRepository(database.Pool)
+	serverRepo := repository.NewServerRepository(database.Pool)
 
 	// Initialize auth service
 	authConfig := auth.DefaultConfig(cfg.ServiceNodeSecret)
@@ -69,6 +70,7 @@ func main() {
 
 	// Initialize handlers
 	authHandler := api.NewAuthHandler(authService)
+	serverHandler := api.NewServerHandler(serverRepo)
 
 	r := chi.NewRouter()
 
@@ -96,6 +98,13 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.AuthMiddleware(authService))
 			r.Get("/auth/me", authHandler.Me)
+
+			// Server routes
+			r.Get("/servers", serverHandler.List)
+			r.Post("/servers", serverHandler.Create)
+			r.Get("/servers/{id}", serverHandler.Get)
+			r.Put("/servers/{id}", serverHandler.Update)
+			r.Delete("/servers/{id}", serverHandler.Delete)
 		})
 	})
 

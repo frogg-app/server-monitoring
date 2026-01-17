@@ -191,6 +191,126 @@ class PulseTestSuite:
             return True, "Refresh without token rejected"
         return False, f"Expected 400 or 401, got {status}"
 
+    # ==================== Servers Tests ====================
+    
+    def test_servers_requires_auth(self) -> tuple[bool, str]:
+        """Test that servers endpoint requires authentication"""
+        old_token = self.access_token
+        self.access_token = None
+        try:
+            status, data = self._request('GET', '/api/v1/servers')
+            if status != 401:
+                return False, f"Expected 401, got {status}"
+            return True, "Servers endpoint requires auth"
+        finally:
+            self.access_token = old_token
+    
+    def test_servers_list_authenticated(self) -> tuple[bool, str]:
+        """Test listing servers with valid authentication"""
+        # First login to get a valid token
+        status, data = self._request('POST', '/api/v1/auth/login', {
+            'username': 'admin',
+            'password': 'admin123'
+        })
+        if status != 200:
+            return False, f"Login failed: {status}"
+        
+        self.access_token = data.get('access_token')
+        if not self.access_token:
+            return False, "No access token returned"
+        
+        # Now get servers
+        status, data = self._request('GET', '/api/v1/servers')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'servers' not in data:
+            return False, "Response missing 'servers' field"
+        if not isinstance(data['servers'], list):
+            return False, "'servers' is not a list"
+        if 'total' not in data:
+            return False, "Response missing 'total' field"
+        
+        return True, f"Listed {data['total']} servers"
+    
+    def test_servers_create(self) -> tuple[bool, str]:
+        """Test creating a server"""
+        # Ensure we have auth
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        # Create a server
+        server_data = {
+            'name': 'Test Server',
+            'hostname': 'test.example.com',
+            'ip_address': '192.168.1.100',
+            'port': 22,
+            'os_type': 'linux',
+            'description': 'Integration test server'
+        }
+        
+        status, data = self._request('POST', '/api/v1/servers', server_data)
+        if status not in [200, 201]:
+            return False, f"Expected 200 or 201, got {status}"
+        
+        if 'id' not in data and 'server' not in data:
+            return False, "Response missing server ID"
+        
+        # Store server ID for cleanup
+        if 'id' in data:
+            self._test_server_id = data['id']
+        elif 'server' in data:
+            self._test_server_id = data['server'].get('id')
+        
+        return True, "Server created successfully"
+    
+    def test_servers_get_by_id(self) -> tuple[bool, str]:
+        """Test getting a specific server"""
+        server_id = getattr(self, '_test_server_id', None)
+        if not server_id:
+            return True, "Skipped (no test server created)"
+        
+        status, data = self._request('GET', f'/api/v1/servers/{server_id}')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        return True, "Server retrieved successfully"
+    
+    def test_servers_update(self) -> tuple[bool, str]:
+        """Test updating a server"""
+        server_id = getattr(self, '_test_server_id', None)
+        if not server_id:
+            return True, "Skipped (no test server created)"
+        
+        update_data = {
+            'name': 'Updated Test Server',
+            'description': 'Updated via integration test'
+        }
+        
+        status, data = self._request('PUT', f'/api/v1/servers/{server_id}', update_data)
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        return True, "Server updated successfully"
+    
+    def test_servers_delete(self) -> tuple[bool, str]:
+        """Test deleting a server"""
+        server_id = getattr(self, '_test_server_id', None)
+        if not server_id:
+            return True, "Skipped (no test server created)"
+        
+        status, data = self._request('DELETE', f'/api/v1/servers/{server_id}')
+        if status not in [200, 204]:
+            return False, f"Expected 200 or 204, got {status}"
+        
+        return True, "Server deleted successfully"
+
     # ==================== Web App Tests ====================
     
     def test_web_app_serves_html(self) -> tuple[bool, str]:
@@ -272,6 +392,16 @@ class PulseTestSuite:
         self.run_test("Protected endpoint - invalid token", self.test_protected_endpoint_invalid_token)
         self.run_test("Logout - without token", self.test_logout_without_token)
         self.run_test("Refresh - without token", self.test_refresh_without_token)
+        
+        # Servers Tests
+        print(f"\n{BOLD}Servers API Tests{RESET}")
+        print("-" * 40)
+        self.run_test("List servers - requires auth", self.test_servers_requires_auth)
+        self.run_test("List servers - authenticated", self.test_servers_list_authenticated)
+        self.run_test("Create server", self.test_servers_create)
+        self.run_test("Get server by ID", self.test_servers_get_by_id)
+        self.run_test("Update server", self.test_servers_update)
+        self.run_test("Delete server", self.test_servers_delete)
         
         # Web App Tests
         if self.web_url:

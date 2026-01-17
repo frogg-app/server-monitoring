@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+/service-node/serviced
+/service-node/bin/
+/app/build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# Go
+*.test
+coverage.out
+coverage.html
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/app/.dart_tool/
+/app/build/
+/app/.flutter-plugins
+/app/.flutter-plugins-dependencies
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test artifacts
+test-results/
+.pytest_cache/
+
+# Docker
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.backup
+backups/
+
+# Generated API clients
+/app/lib/core/api/generated/
+/shared/generated/

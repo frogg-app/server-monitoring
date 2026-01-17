@@ -1,0 +1,112 @@
+# Pulse Server Monitoring - Docker Compose Configuration
+# 
+# Usage:
+#   Development:  docker compose up -d
+#   Production:   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Required environment variables (see .env.example):
+#   - POSTGRES_PASSWORD
+#   - JWT_SECRET
+#   - VAULT_KEY
+
+services:
+  # PostgreSQL database with TimescaleDB extension
+  db:
+    image: timescale/timescaledb:latest-pg15
+    container_name: pulse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-pulse}
+      POSTGRES_USER: ${POSTGRES_USER:-pulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Use long syntax with published: 0 to let Docker assign an available random host port
+      - target: 5432
+        published: 0
+        protocol: tcp
+        mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pulse} -d ${POSTGRES_DB:-pulse}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pulse-network
+
+  # Pulse API Server
+  api:
+    build:
+      context: ./service-node
+      dockerfile: Dockerfile
+    container_name: pulse-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgres://${POSTGRES_USER:-pulse}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-pulse}?sslmode=disable
+      
+      # Server
+      PORT: ${PORT:-8080}
+      # Bind to all interfaces so the published host port is reachable
+      BIND_ADDR: ${BIND_ADDR:-0.0.0.0:8080}
+      ENV: ${ENV:-production}
+      
+      # Auth
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      ACCESS_TOKEN_TTL: ${ACCESS_TOKEN_TTL:-15m}
+      REFRESH_TOKEN_TTL: ${REFRESH_TOKEN_TTL:-168h}
+      
+      # Vault
+      VAULT_KEY: ${VAULT_KEY:?VAULT_KEY is required}
+      
+      # Metrics
+      COLLECTION_INTERVAL: ${COLLECTION_INTERVAL:-30s}
+      RETENTION_DAYS: ${RETENTION_DAYS:-30}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pulse-network
+
+  # Flutter web app
+  web:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: pulse-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      # Use dynamic port assignment to avoid conflicts
+      - target: 80
+        published: 0
+        protocol: tcp
+        mode: host
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - pulse-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  pulse-network:
+    driver: bridge

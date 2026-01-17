@@ -1,0 +1,66 @@
+# Pulse Server Monitoring - Production Docker Compose Overrides
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    # In production, don't expose the database port externally
+    ports: []
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256M
+
+  api:
+    # Use pre-built image in production
+    image: ${PULSE_IMAGE:-ghcr.io/pulse-server/pulse:latest}
+    build: null
+    # Add resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    # Stricter restart policy
+    restart: always
+    # Production logging
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Enable nginx in production
+  nginx:
+    image: nginx:alpine
+    container_name: pulse-nginx
+    restart: always
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - ./app/build/web:/usr/share/nginx/html:ro
+    networks:
+      - pulse-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

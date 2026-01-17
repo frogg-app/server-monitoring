@@ -311,6 +311,183 @@ class PulseTestSuite:
         
         return True, "Server deleted successfully"
 
+    # ==================== Alert Rules Tests ====================
+    
+    def test_alert_rules_requires_auth(self) -> tuple[bool, str]:
+        """Test that alert rules endpoint requires authentication"""
+        old_token = self.access_token
+        self.access_token = None
+        try:
+            status, data = self._request('GET', '/api/v1/alerts/rules')
+            if status != 401:
+                return False, f"Expected 401, got {status}"
+            return True, "Alert rules endpoint requires auth"
+        finally:
+            self.access_token = old_token
+    
+    def test_alert_rules_list(self) -> tuple[bool, str]:
+        """Test listing alert rules"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        status, data = self._request('GET', '/api/v1/alerts/rules')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'rules' not in data:
+            return False, "Response missing 'rules' field"
+        if 'total' not in data:
+            return False, "Response missing 'total' field"
+        
+        return True, f"Listed {data['total']} alert rules"
+    
+    def test_alert_rules_create(self) -> tuple[bool, str]:
+        """Test creating an alert rule"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        rule_data = {
+            'name': 'Test High CPU',
+            'metric_type': 'cpu',
+            'operator': 'gt',
+            'threshold': 90,
+            'duration_seconds': 60,
+            'severity': 'warning'
+        }
+        
+        status, data = self._request('POST', '/api/v1/alerts/rules', rule_data)
+        if status not in [200, 201]:
+            return False, f"Expected 200 or 201, got {status}"
+        
+        if 'rule' not in data:
+            return False, "Response missing 'rule' field"
+        
+        self._test_alert_rule_id = data['rule'].get('id')
+        return True, "Alert rule created successfully"
+    
+    def test_alert_rules_delete(self) -> tuple[bool, str]:
+        """Test deleting an alert rule"""
+        rule_id = getattr(self, '_test_alert_rule_id', None)
+        if not rule_id:
+            return True, "Skipped (no test alert rule created)"
+        
+        status, data = self._request('DELETE', f'/api/v1/alerts/rules/{rule_id}')
+        if status not in [200, 204]:
+            return False, f"Expected 200 or 204, got {status}"
+        
+        return True, "Alert rule deleted successfully"
+
+    # ==================== Alert Events Tests ====================
+    
+    def test_alert_events_list(self) -> tuple[bool, str]:
+        """Test listing alert events"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        status, data = self._request('GET', '/api/v1/alerts/events')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'events' not in data:
+            return False, "Response missing 'events' field"
+        if 'total' not in data:
+            return False, "Response missing 'total' field"
+        
+        return True, f"Listed {data['total']} alert events"
+
+    # ==================== Notification Channels Tests ====================
+    
+    def test_notification_channels_requires_auth(self) -> tuple[bool, str]:
+        """Test that notification channels endpoint requires authentication"""
+        old_token = self.access_token
+        self.access_token = None
+        try:
+            status, data = self._request('GET', '/api/v1/settings/notifications')
+            if status != 401:
+                return False, f"Expected 401, got {status}"
+            return True, "Notification channels endpoint requires auth"
+        finally:
+            self.access_token = old_token
+    
+    def test_notification_channels_list(self) -> tuple[bool, str]:
+        """Test listing notification channels"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        status, data = self._request('GET', '/api/v1/settings/notifications')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'channels' not in data:
+            return False, "Response missing 'channels' field"
+        if 'total' not in data:
+            return False, "Response missing 'total' field"
+        
+        return True, f"Listed {data['total']} notification channels"
+    
+    def test_notification_channels_create(self) -> tuple[bool, str]:
+        """Test creating a notification channel"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        channel_data = {
+            'name': 'Test Webhook',
+            'type': 'webhook',
+            'config': {'url': 'https://example.com/test'}
+        }
+        
+        status, data = self._request('POST', '/api/v1/settings/notifications', channel_data)
+        if status not in [200, 201]:
+            return False, f"Expected 200 or 201, got {status}"
+        
+        if 'channel' not in data:
+            return False, "Response missing 'channel' field"
+        
+        self._test_notification_channel_id = data['channel'].get('id')
+        return True, "Notification channel created successfully"
+    
+    def test_notification_channels_delete(self) -> tuple[bool, str]:
+        """Test deleting a notification channel"""
+        channel_id = getattr(self, '_test_notification_channel_id', None)
+        if not channel_id:
+            return True, "Skipped (no test notification channel created)"
+        
+        status, data = self._request('DELETE', f'/api/v1/settings/notifications/{channel_id}')
+        if status not in [200, 204]:
+            return False, f"Expected 200 or 204, got {status}"
+        
+        return True, "Notification channel deleted successfully"
+
     # ==================== Web App Tests ====================
     
     def test_web_app_serves_html(self) -> tuple[bool, str]:
@@ -402,6 +579,27 @@ class PulseTestSuite:
         self.run_test("Get server by ID", self.test_servers_get_by_id)
         self.run_test("Update server", self.test_servers_update)
         self.run_test("Delete server", self.test_servers_delete)
+        
+        # Alert Rules Tests
+        print(f"\n{BOLD}Alert Rules API Tests{RESET}")
+        print("-" * 40)
+        self.run_test("List alert rules - requires auth", self.test_alert_rules_requires_auth)
+        self.run_test("List alert rules", self.test_alert_rules_list)
+        self.run_test("Create alert rule", self.test_alert_rules_create)
+        self.run_test("Delete alert rule", self.test_alert_rules_delete)
+        
+        # Alert Events Tests
+        print(f"\n{BOLD}Alert Events API Tests{RESET}")
+        print("-" * 40)
+        self.run_test("List alert events", self.test_alert_events_list)
+        
+        # Notification Channels Tests
+        print(f"\n{BOLD}Notification Channels API Tests{RESET}")
+        print("-" * 40)
+        self.run_test("List channels - requires auth", self.test_notification_channels_requires_auth)
+        self.run_test("List notification channels", self.test_notification_channels_list)
+        self.run_test("Create notification channel", self.test_notification_channels_create)
+        self.run_test("Delete notification channel", self.test_notification_channels_delete)
         
         # Web App Tests
         if self.web_url:

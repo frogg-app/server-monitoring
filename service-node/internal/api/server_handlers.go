@@ -68,7 +68,9 @@ func (h *ServerHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(server)
+	json.NewEncoder(w).Encode(map[string]any{
+		"server": server,
+	})
 }
 
 // Create handles POST /servers
@@ -120,7 +122,9 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(server)
+	json.NewEncoder(w).Encode(map[string]any{
+		"server": server,
+	})
 }
 
 // Update handles PATCH /servers/{id}
@@ -151,7 +155,9 @@ func (h *ServerHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(server)
+	json.NewEncoder(w).Encode(map[string]any{
+		"server": server,
+	})
 }
 
 // Delete handles DELETE /servers/{id}

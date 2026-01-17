@@ -63,6 +63,7 @@ func main() {
 	tokenRepo := repository.NewRefreshTokenRepository(database.Pool)
 	auditRepo := repository.NewAuditLogRepository(database.Pool)
 	serverRepo := repository.NewServerRepository(database.Pool)
+	alertRepo := repository.NewAlertRepository(database.Pool)
 
 	// Initialize auth service
 	authConfig := auth.DefaultConfig(cfg.ServiceNodeSecret)
@@ -71,6 +72,7 @@ func main() {
 	// Initialize handlers
 	authHandler := api.NewAuthHandler(authService)
 	serverHandler := api.NewServerHandler(serverRepo)
+	alertHandler := api.NewAlertHandler(alertRepo)
 
 	r := chi.NewRouter()
 
@@ -105,6 +107,24 @@ func main() {
 			r.Get("/servers/{id}", serverHandler.Get)
 			r.Put("/servers/{id}", serverHandler.Update)
 			r.Delete("/servers/{id}", serverHandler.Delete)
+
+			// Alert rules routes
+			r.Get("/alerts/rules", alertHandler.ListAlertRules)
+			r.Post("/alerts/rules", alertHandler.CreateAlertRule)
+			r.Get("/alerts/rules/{id}", alertHandler.GetAlertRule)
+			r.Patch("/alerts/rules/{id}", alertHandler.UpdateAlertRule)
+			r.Delete("/alerts/rules/{id}", alertHandler.DeleteAlertRule)
+
+			// Alert events routes
+			r.Get("/alerts/events", alertHandler.ListAlertEvents)
+			r.Get("/alerts/events/{id}", alertHandler.GetAlertEvent)
+			r.Post("/alerts/events/{id}/acknowledge", alertHandler.AcknowledgeAlertEvent)
+
+			// Notification channels routes (under /settings/notifications)
+			r.Get("/settings/notifications", alertHandler.ListNotificationChannels)
+			r.Post("/settings/notifications", alertHandler.CreateNotificationChannel)
+			r.Delete("/settings/notifications/{id}", alertHandler.DeleteNotificationChannel)
+			r.Post("/settings/notifications/{id}/test", alertHandler.TestNotificationChannel)
 		})
 	})
 

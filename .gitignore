@@ -81,4 +81,3 @@ backups/
 # Generated API clients
 /app/lib/core/api/generated/
 /shared/generated/
-FIXES_AND_AGENT_GUIDELINES.md

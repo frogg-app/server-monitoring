@@ -46,21 +46,23 @@ class SettingsPage extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.dark_mode),
-                  title: const Text('Dark Mode'),
-                  subtitle: const Text('Use dark theme'),
-                  trailing: Switch(
-                    value: true, // Currently always dark
-                    onChanged: (value) {
-                      // TODO: Implement theme switching
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Theme switching coming soon...'),
-                        ),
-                      );
-                    },
-                  ),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final themeMode = ref.watch(themeModeProvider);
+                    final isDark = themeMode == ThemeMode.dark;
+                    return ListTile(
+                      leading: const Icon(Icons.dark_mode),
+                      title: const Text('Dark Mode'),
+                      subtitle: const Text('Use dark theme'),
+                      trailing: Switch(
+                        value: isDark,
+                        onChanged: (value) {
+                          ref.read(themeModeProvider.notifier).state =
+                              value ? ThemeMode.dark : ThemeMode.light;
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

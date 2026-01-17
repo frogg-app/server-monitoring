@@ -73,6 +73,8 @@ func main() {
 	authHandler := api.NewAuthHandler(authService)
 	serverHandler := api.NewServerHandler(serverRepo)
 	alertHandler := api.NewAlertHandler(alertRepo)
+	metricsHandler := api.NewMetricsHandler(serverRepo)
+	containerHandler := api.NewContainerHandler(serverRepo)
 
 	r := chi.NewRouter()
 
@@ -107,6 +109,17 @@ func main() {
 			r.Get("/servers/{id}", serverHandler.Get)
 			r.Put("/servers/{id}", serverHandler.Update)
 			r.Delete("/servers/{id}", serverHandler.Delete)
+			r.Post("/servers/{id}/test", serverHandler.TestConnection)
+
+			// Server metrics routes
+			r.Get("/servers/{id}/metrics", metricsHandler.GetCurrentMetrics)
+			r.Get("/servers/{id}/metrics/history", metricsHandler.GetMetricsHistory)
+
+			// Server container routes
+			r.Get("/servers/{id}/containers", containerHandler.ListContainers)
+			r.Get("/servers/{id}/containers/{containerId}/stats", containerHandler.GetContainerStats)
+			r.Post("/servers/{id}/containers/{containerId}/{action}", containerHandler.ContainerAction)
+			r.Get("/servers/{id}/containers/{containerId}/logs", containerHandler.GetContainerLogs)
 
 			// Alert rules routes
 			r.Get("/alerts/rules", alertHandler.ListAlertRules)

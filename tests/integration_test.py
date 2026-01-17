@@ -311,6 +311,79 @@ class PulseTestSuite:
         
         return True, "Server deleted successfully"
 
+    # ==================== Server Metrics Tests ====================
+
+    def test_server_metrics(self) -> tuple[bool, str]:
+        """Test getting server metrics"""
+        # First create a test server
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        server_data = {
+            'name': 'Metrics Test Server',
+            'hostname': 'metrics.example.com',
+            'port': 22
+        }
+        status, data = self._request('POST', '/api/v1/servers', server_data)
+        if status not in [200, 201]:
+            return False, f"Failed to create test server: {status}"
+        
+        server_id = data.get('server', {}).get('id') or data.get('id')
+        
+        # Get metrics
+        status, data = self._request('GET', f'/api/v1/servers/{server_id}/metrics')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'metrics' not in data:
+            return False, "Response missing 'metrics' field"
+        
+        # Cleanup
+        self._request('DELETE', f'/api/v1/servers/{server_id}')
+        
+        return True, "Server metrics endpoint working"
+
+    def test_server_containers(self) -> tuple[bool, str]:
+        """Test getting server containers"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        server_data = {
+            'name': 'Container Test Server',
+            'hostname': 'containers.example.com',
+            'port': 22
+        }
+        status, data = self._request('POST', '/api/v1/servers', server_data)
+        if status not in [200, 201]:
+            return False, f"Failed to create test server: {status}"
+        
+        server_id = data.get('server', {}).get('id') or data.get('id')
+        
+        # Get containers
+        status, data = self._request('GET', f'/api/v1/servers/{server_id}/containers')
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        if 'containers' not in data:
+            return False, "Response missing 'containers' field"
+        
+        # Cleanup
+        self._request('DELETE', f'/api/v1/servers/{server_id}')
+        
+        return True, "Server containers endpoint working"
+
     # ==================== Alert Rules Tests ====================
     
     def test_alert_rules_requires_auth(self) -> tuple[bool, str]:
@@ -578,6 +651,8 @@ class PulseTestSuite:
         self.run_test("Create server", self.test_servers_create)
         self.run_test("Get server by ID", self.test_servers_get_by_id)
         self.run_test("Update server", self.test_servers_update)
+        self.run_test("Get server metrics", self.test_server_metrics)
+        self.run_test("Get server containers", self.test_server_containers)
         self.run_test("Delete server", self.test_servers_delete)
         
         # Alert Rules Tests

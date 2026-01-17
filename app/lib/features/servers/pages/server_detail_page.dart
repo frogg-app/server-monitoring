@@ -41,9 +41,23 @@ class ServerDetailPage extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.terminal),
             onPressed: () {
-              // TODO: Open SSH terminal
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('SSH terminal coming soon...')),
+              // SSH terminal requires backend WebSocket support
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('SSH Terminal'),
+                  content: const Text(
+                    'Web-based SSH terminal is planned for a future release. '
+                    'For now, connect using your preferred SSH client:\n\n'
+                    'ssh user@hostname -p port',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
               );
             },
             tooltip: 'Open Terminal',

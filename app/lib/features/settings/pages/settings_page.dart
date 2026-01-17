@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/providers.dart';
 import '../../auth/auth.dart';
 import '../../alerts/alerts.dart';
 
@@ -85,20 +87,12 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.code),
-                  title: const Text('Source Code'),
-                  trailing: const Icon(Icons.open_in_new, size: 18),
-                  onTap: () {
-                    // TODO: Open GitHub
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
                   leading: const Icon(Icons.description_outlined),
                   title: const Text('Documentation'),
                   trailing: const Icon(Icons.open_in_new, size: 18),
                   onTap: () {
-                    // TODO: Open docs
+                    // Open docs page in new tab
+                    _launchDocs(context);
                   },
                 ),
               ],
@@ -154,6 +148,20 @@ class SettingsPage extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  void _launchDocs(BuildContext context) async {
+    // Open the documentation page
+    final uri = Uri.parse('/docs/');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Documentation available at /docs/')),
+        );
+      }
+    }
   }
 }
 

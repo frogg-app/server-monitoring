@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../models/models.dart';
 import '../providers/providers.dart';
+import '../repositories/server_repository.dart';
 import '../../metrics/metrics.dart';
 import '../../containers/containers.dart';
+import '../../../core/api/api.dart';
 
 /// Server detail page showing metrics, containers, and actions
 class ServerDetailPage extends ConsumerWidget {
@@ -206,6 +209,10 @@ class _ServerDetailContent extends StatelessWidget {
           CurrentMetricsCard(serverId: serverId),
           const SizedBox(height: 16),
           
+          // Credentials section
+          _CredentialsCard(serverId: serverId),
+          const SizedBox(height: 16),
+          
           // Time range selector for charts
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
@@ -376,5 +383,363 @@ class _StatusChip extends StatelessWidget {
   String _capitalize(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1);
+  }
+}
+
+/// Credentials card
+class _CredentialsCard extends ConsumerWidget {
+  final String serverId;
+
+  const _CredentialsCard({required this.serverId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final credsState = ref.watch(serverCredentialsProvider(serverId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Credentials',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 20),
+                  onPressed: () => _showAddCredentialDialog(context, ref),
+                  tooltip: 'Add Credential',
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            switch (credsState) {
+              CredentialsLoading() => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+              CredentialsError(message: final msg) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Text('Failed to load credentials',
+                            style: TextStyle(color: theme.colorScheme.error)),
+                        Text(msg, style: theme.textTheme.bodySmall),
+                        TextButton(
+                          onPressed: () => ref
+                              .read(serverCredentialsProvider(serverId).notifier)
+                              .refresh(),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              CredentialsLoaded(credentials: final creds) => creds.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.key_off,
+                                size: 40, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No credentials configured',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _showAddCredentialDialog(context, ref),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Credential'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: creds.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final cred = creds[index];
+                        return ListTile(
+                          leading: Icon(
+                            cred.type == CredentialType.sshKey
+                                ? Icons.vpn_key
+                                : Icons.password,
+                            color: theme.colorScheme.primary,
+                          ),
+                          title: Text(cred.name),
+                          subtitle: Text(
+                            '${cred.type == CredentialType.sshKey ? 'SSH Key' : 'Password'} • ${cred.username ?? 'N/A'}',
+                          ),
+                          trailing: IconButton(
+                            icon:
+                                Icon(Icons.delete, color: theme.colorScheme.error),
+                            onPressed: () => _confirmDelete(context, ref, cred),
+                          ),
+                        );
+                      },
+                    ),
+            },
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddCredentialDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => _AddCredentialDialog(serverId: serverId),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, WidgetRef ref, Credential cred) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Credential'),
+        content: Text('Are you sure you want to delete "${cred.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref
+                  .read(serverCredentialsProvider(serverId).notifier)
+                  .deleteCredential(cred.id);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Add credential dialog
+class _AddCredentialDialog extends ConsumerStatefulWidget {
+  final String serverId;
+
+  const _AddCredentialDialog({required this.serverId});
+
+  @override
+  ConsumerState<_AddCredentialDialog> createState() =>
+      _AddCredentialDialogState();
+}
+
+class _AddCredentialDialogState extends ConsumerState<_AddCredentialDialog> {
+  final _formKey = GlobalKey<FormState>();
+  CredentialType _type = CredentialType.sshPassword;
+  final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _privateKeyController = TextEditingController();
+  final _passphraseController = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _privateKeyController.dispose();
+    _passphraseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add Credential'),
+      content: SizedBox(
+        width: 400,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Type selector
+                DropdownButtonFormField<CredentialType>(
+                  value: _type,
+                  decoration: const InputDecoration(
+                    labelText: 'Authentication Type',
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: CredentialType.sshPassword,
+                      child: Text('SSH Password'),
+                    ),
+                    DropdownMenuItem(
+                      value: CredentialType.sshKey,
+                      child: Text('SSH Key'),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _type = value);
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Name
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Credential Name',
+                    hintText: 'e.g., Production SSH',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Name is required' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Username
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    hintText: 'e.g., root',
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Username is required' : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Password (for SSH Password type)
+                if (_type == CredentialType.sshPassword) ...[
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscurePassword
+                            ? Icons.visibility
+                            : Icons.visibility_off),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Password is required' : null,
+                  ),
+                ],
+
+                // Private key (for SSH Key type)
+                if (_type == CredentialType.sshKey) ...[
+                  TextFormField(
+                    controller: _privateKeyController,
+                    maxLines: 5,
+                    decoration: const InputDecoration(
+                      labelText: 'Private Key',
+                      hintText: '-----BEGIN OPENSSH PRIVATE KEY-----\n...',
+                      alignLabelWithHint: true,
+                    ),
+                    validator: (v) => (v == null || v.isEmpty)
+                        ? 'Private key is required'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _passphraseController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Passphrase (optional)',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final notifier =
+          ref.read(serverCredentialsProvider(widget.serverId).notifier);
+
+      if (_type == CredentialType.sshPassword) {
+        final req = CreateSshPasswordCredentialRequest(
+          name: _nameController.text.trim(),
+          username: _usernameController.text.trim(),
+          password: _passwordController.text,
+        );
+        await notifier.createSshPassword(req);
+      } else {
+        final req = CreateSshKeyCredentialRequest(
+          name: _nameController.text.trim(),
+          username: _usernameController.text.trim(),
+          privateKey: _privateKeyController.text,
+          passphrase: _passphraseController.text.isEmpty
+              ? null
+              : _passphraseController.text,
+        );
+        await notifier.createSshKey(req);
+      }
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Credential added successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add credential: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 }

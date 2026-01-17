@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
 import '../../auth/auth.dart';
 import '../../alerts/alerts.dart';
+import '../providers/providers.dart';
 
 /// Settings page with user profile and notification settings
 class SettingsPage extends ConsumerWidget {
@@ -40,6 +42,24 @@ class SettingsPage extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           const _NotificationChannelsList(),
+          const SizedBox(height: 24),
+
+          // Key Management section
+          _SectionHeader(title: 'SSH Key Management'),
+          const SizedBox(height: 8),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.vpn_key),
+                  title: const Text('Generate SSH Key'),
+                  subtitle: const Text('Create a new Ed25519 key pair'),
+                  trailing: const Icon(Icons.add),
+                  onTap: () => _showGenerateKeyDialog(context, ref),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
 
           // Appearance section
@@ -162,6 +182,13 @@ class SettingsPage extends ConsumerWidget {
         );
       }
     }
+  }
+
+  void _showGenerateKeyDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => const _GenerateKeyDialog(),
+    );
   }
 }
 
@@ -620,5 +647,203 @@ class _AddNotificationChannelDialogState
       case NotificationChannelType.pushover:
         return {'user_key': _urlController.text.trim()};
     }
+  }
+}
+
+/// Generate SSH Key dialog
+class _GenerateKeyDialog extends ConsumerStatefulWidget {
+  const _GenerateKeyDialog();
+
+  @override
+  ConsumerState<_GenerateKeyDialog> createState() => _GenerateKeyDialogState();
+}
+
+class _GenerateKeyDialogState extends ConsumerState<_GenerateKeyDialog> {
+  final _nameController = TextEditingController(text: 'Pulse Server Key');
+  bool _isLoading = false;
+  GeneratedKeyPair? _generatedKey;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (_generatedKey != null) {
+      // Show generated key
+      return AlertDialog(
+        title: const Text('SSH Key Generated'),
+        content: SizedBox(
+          width: 500,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green, size: 48),
+              const SizedBox(height: 16),
+              const Text(
+                'Your new SSH key has been generated. '
+                'Save the private key securely - it will not be shown again!',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 16),
+              Text('Public Key:', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: SelectableText(
+                  _generatedKey!.publicKey,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _copyToClipboard(
+                        context, _generatedKey!.publicKey, 'Public key'),
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy Public Key'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text('Private Key:', style: theme.textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(8),
+                height: 150,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: SingleChildScrollView(
+                  child: SelectableText(
+                    _generatedKey!.privateKey,
+                    style:
+                        const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _copyToClipboard(
+                        context, _generatedKey!.privateKey, 'Private key'),
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy Private Key'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Done'),
+          ),
+        ],
+      );
+    }
+
+    // Show generation form
+    return AlertDialog(
+      title: const Text('Generate SSH Key'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Key Name',
+                hintText: 'e.g., Pulse Server Key',
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      size: 20, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'An Ed25519 SSH key pair will be generated. '
+                      'The private key will only be shown once.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _generateKey,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Generate'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _generateKey() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final keyService = ref.read(keyServiceProvider);
+      final key = await keyService.generateKey(
+        name: _nameController.text.trim(),
+      );
+      setState(() {
+        _generatedKey = key;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate key: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _copyToClipboard(BuildContext context, String text, String label) {
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label copied to clipboard')),
+    );
   }
 }

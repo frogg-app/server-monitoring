@@ -74,6 +74,12 @@ class ServersNotifier extends StateNotifier<ServersState> {
     await _repository.deleteServer(id);
     await loadServers(); // Refresh list
   }
+
+  Future<Server> updateServer(String id, UpdateServerRequest request) async {
+    final server = await _repository.updateServer(id, request);
+    await loadServers(); // Refresh list
+    return server;
+  }
 }
 
 /// Server list provider
@@ -160,4 +166,98 @@ final selectedServerProvider = Provider<ServerWithMetrics?>((ref) {
         .firstOrNull;
   }
   return null;
+});
+
+/// Credentials state for a server
+sealed class CredentialsState {
+  const CredentialsState();
+}
+
+class CredentialsLoading extends CredentialsState {
+  const CredentialsLoading();
+}
+
+class CredentialsLoaded extends CredentialsState {
+  final List<Credential> credentials;
+  const CredentialsLoaded(this.credentials);
+}
+
+class CredentialsError extends CredentialsState {
+  final String message;
+  const CredentialsError(this.message);
+}
+
+/// Credentials notifier for a server
+class CredentialsNotifier extends StateNotifier<CredentialsState> {
+  final ServerRepository _repository;
+  final String serverId;
+
+  CredentialsNotifier(this._repository, this.serverId)
+      : super(const CredentialsLoading()) {
+    loadCredentials();
+  }
+
+  Future<void> loadCredentials() async {
+    state = const CredentialsLoading();
+    try {
+      final creds = await _repository.getServerCredentials(serverId);
+      state = CredentialsLoaded(creds);
+    } catch (e) {
+      state = CredentialsError(e.toString());
+    }
+  }
+
+  Future<void> refresh() => loadCredentials();
+
+  Future<Credential> createSshPassword(CreateSshPasswordCredentialRequest req) async {
+    final cred = await _repository.createSshPasswordCredential(serverId, req);
+    await loadCredentials();
+    return cred;
+  }
+
+  Future<Credential> createSshKey(CreateSshKeyCredentialRequest req) async {
+    final cred = await _repository.createSshKeyCredential(serverId, req);
+    await loadCredentials();
+    return cred;
+  }
+
+  Future<void> deleteCredential(String credentialId) async {
+    await _repository.removeCredentialFromServer(serverId, credentialId);
+    await loadCredentials();
+  }
+}
+
+/// Server credentials provider (family for multiple servers)
+final serverCredentialsProvider = StateNotifierProvider.family<
+    CredentialsNotifier, CredentialsState, String>((ref, serverId) {
+  final repository = ref.watch(serverRepositoryProvider);
+  return CredentialsNotifier(repository, serverId);
+});
+
+/// Server filter query provider
+final serverFilterQueryProvider = StateProvider<String>((ref) => '');
+
+/// Filtered servers provider
+final filteredServersProvider = Provider<List<ServerWithMetrics>>((ref) {
+  final serversState = ref.watch(serversProvider);
+  final query = ref.watch(serverFilterQueryProvider).toLowerCase();
+
+  if (serversState is! ServersLoaded) return [];
+
+  final servers = serversState.servers;
+  if (query.isEmpty) return servers;
+
+  return servers.where((server) {
+    // Search in name
+    if (server.name.toLowerCase().contains(query)) return true;
+    // Search in hostname
+    if (server.hostname.toLowerCase().contains(query)) return true;
+    // Search in description
+    if (server.description?.toLowerCase().contains(query) ?? false) return true;
+    // Search in tags
+    if (server.tags.any((tag) => tag.toLowerCase().contains(query))) return true;
+    // Search by status
+    if (server.status.name.toLowerCase().contains(query)) return true;
+    return false;
+  }).toList();
 });

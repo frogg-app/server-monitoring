@@ -29,6 +29,13 @@ class ServerListPage extends ConsumerWidget {
             tooltip: 'Add Server',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(56),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: _SearchField(),
+          ),
+        ),
       ),
       body: switch (serversState) {
         ServersLoading() => const _ServerListSkeleton(),
@@ -36,9 +43,7 @@ class ServerListPage extends ConsumerWidget {
             message: msg,
             onRetry: () => ref.read(serversProvider.notifier).refresh(),
           ),
-        ServersLoaded(servers: final servers) => servers.isEmpty
-            ? const _EmptyServerList()
-            : _ServerListView(servers: servers),
+        ServersLoaded() => const _FilteredServerListView(),
       },
     );
   }
@@ -51,17 +56,76 @@ class ServerListPage extends ConsumerWidget {
   }
 }
 
-/// Server list view
-class _ServerListView extends StatelessWidget {
-  final List<ServerWithMetrics> servers;
+/// Search field widget
+class _SearchField extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final query = ref.watch(serverFilterQueryProvider);
 
-  const _ServerListView({required this.servers});
+    return TextField(
+      decoration: InputDecoration(
+        hintText: 'Filter by name, hostname, tag, or status...',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: query.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () =>
+                    ref.read(serverFilterQueryProvider.notifier).state = '',
+              )
+            : null,
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      onChanged: (value) =>
+          ref.read(serverFilterQueryProvider.notifier).state = value,
+    );
+  }
+}
+
+/// Filtered server list view
+class _FilteredServerListView extends ConsumerWidget {
+  const _FilteredServerListView();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final servers = ref.watch(filteredServersProvider);
+    final query = ref.watch(serverFilterQueryProvider);
+
+    if (servers.isEmpty && query.isEmpty) {
+      return const _EmptyServerList();
+    }
+
+    if (servers.isEmpty && query.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              'No servers match "$query"',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () =>
+                  ref.read(serverFilterQueryProvider.notifier).state = '',
+              child: const Text('Clear filter'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return RefreshIndicator(
       onRefresh: () async {
-        // Will be handled by provider
+        ref.read(serversProvider.notifier).refresh();
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
@@ -272,10 +336,28 @@ class _ServerCard extends ConsumerWidget {
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
     switch (action) {
       case 'connect':
-        // TODO: Implement connect
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('SSH Terminal'),
+            content: const Text(
+              'SSH terminal access is a planned feature that will allow you '
+              'to connect directly to your server from the browser.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
         break;
       case 'edit':
-        // TODO: Implement edit
+        showDialog(
+          context: context,
+          builder: (ctx) => _EditServerDialog(server: server),
+        );
         break;
       case 'delete':
         _confirmDelete(context, ref);
@@ -542,6 +624,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
   final _hostnameController = TextEditingController();
   final _portController = TextEditingController(text: '22');
   final _descriptionController = TextEditingController();
+  final _tagsController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -550,6 +633,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
     _hostnameController.dispose();
     _portController.dispose();
     _descriptionController.dispose();
+    _tagsController.dispose();
     super.dispose();
   }
 
@@ -619,6 +703,14 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
                 ),
                 maxLines: 2,
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (comma-separated)',
+                  hintText: 'production, web, docker',
+                ),
+              ),
             ],
           ),
         ),
@@ -648,6 +740,12 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
     setState(() => _isLoading = true);
 
     try {
+      // Parse tags from comma-separated string
+      final tagsText = _tagsController.text.trim();
+      final tags = tagsText.isEmpty
+          ? <String>[]
+          : tagsText.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+
       final request = CreateServerRequest(
         name: _nameController.text.trim(),
         hostname: _hostnameController.text.trim(),
@@ -655,6 +753,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
+        tags: tags.isEmpty ? null : tags,
       );
 
       await ref.read(serversProvider.notifier).createServer(request);
@@ -666,6 +765,188 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to add server: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+}
+
+/// Edit server dialog
+class _EditServerDialog extends ConsumerStatefulWidget {
+  final ServerWithMetrics server;
+
+  const _EditServerDialog({required this.server});
+
+  @override
+  ConsumerState<_EditServerDialog> createState() => _EditServerDialogState();
+}
+
+class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _hostnameController;
+  late final TextEditingController _portController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _tagsController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.server.name);
+    _hostnameController = TextEditingController(text: widget.server.hostname);
+    _portController = TextEditingController(text: widget.server.port.toString());
+    _descriptionController = TextEditingController(text: widget.server.description ?? '');
+    _tagsController = TextEditingController(text: widget.server.tags.join(', '));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _hostnameController.dispose();
+    _portController.dispose();
+    _descriptionController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit Server'),
+      content: SizedBox(
+        width: 400,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'My Server',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _hostnameController,
+                decoration: const InputDecoration(
+                  labelText: 'Hostname / IP',
+                  hintText: '192.168.1.100',
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a hostname or IP';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _portController,
+                decoration: const InputDecoration(
+                  labelText: 'SSH Port',
+                  hintText: '22',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a port';
+                  }
+                  final port = int.tryParse(value);
+                  if (port == null || port < 1 || port > 65535) {
+                    return 'Please enter a valid port (1-65535)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description (optional)',
+                  hintText: 'Web server in living room',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _tagsController,
+                decoration: const InputDecoration(
+                  labelText: 'Tags (comma-separated)',
+                  hintText: 'production, web, docker',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Parse tags from comma-separated string
+      final tagsText = _tagsController.text.trim();
+      final tags = tagsText.isEmpty
+          ? <String>[]
+          : tagsText.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+
+      final request = UpdateServerRequest(
+        name: _nameController.text.trim(),
+        hostname: _hostnameController.text.trim(),
+        port: int.parse(_portController.text.trim()),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        tags: tags,
+      );
+
+      await ref.read(serversProvider.notifier).updateServer(widget.server.id, request);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Server updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update server: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );

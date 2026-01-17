@@ -51,4 +51,7 @@ class ApiEndpoints {
   // Settings endpoints
   static const String settings = '/settings';
   static const String notificationChannels = '/settings/notifications';
+
+  // Key management endpoints
+  static const String keysGenerate = '/keys/generate';
 }

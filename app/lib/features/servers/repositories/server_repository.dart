@@ -83,6 +83,32 @@ class ServerRepository {
         .toList();
   }
 
+  /// Create SSH password credential for server
+  Future<Credential> createSshPasswordCredential(
+    String serverId,
+    CreateSshPasswordCredentialRequest request,
+  ) async {
+    final response = await _client.post(
+      ApiEndpoints.serverCredentials(serverId),
+      data: request.toJson(),
+    );
+    final data = response.data as Map<String, dynamic>;
+    return Credential.fromJson(data['credential'] as Map<String, dynamic>);
+  }
+
+  /// Create SSH key credential for server
+  Future<Credential> createSshKeyCredential(
+    String serverId,
+    CreateSshKeyCredentialRequest request,
+  ) async {
+    final response = await _client.post(
+      ApiEndpoints.serverCredentials(serverId),
+      data: request.toJson(),
+    );
+    final data = response.data as Map<String, dynamic>;
+    return Credential.fromJson(data['credential'] as Map<String, dynamic>);
+  }
+
   /// Add credential to server
   Future<void> addCredentialToServer(String serverId, String credentialId) async {
     await _client.post(

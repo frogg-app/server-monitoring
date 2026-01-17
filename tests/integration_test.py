@@ -384,6 +384,60 @@ class PulseTestSuite:
         
         return True, "Server containers endpoint working"
 
+    def test_server_credentials(self) -> tuple[bool, str]:
+        """Test server credentials CRUD"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+        
+        # Create a test server
+        server_data = {
+            'name': 'Credentials Test Server',
+            'hostname': 'creds.example.com',
+            'port': 22
+        }
+        status, data = self._request('POST', '/api/v1/servers', server_data)
+        if status not in [200, 201]:
+            return False, f"Failed to create test server: {status}"
+        
+        server_id = data.get('server', {}).get('id') or data.get('id')
+        
+        # List credentials (should be empty)
+        status, data = self._request('GET', f'/api/v1/servers/{server_id}/credentials')
+        if status != 200:
+            self._request('DELETE', f'/api/v1/servers/{server_id}')
+            return False, f"Expected 200, got {status}"
+        
+        if 'credentials' not in data:
+            self._request('DELETE', f'/api/v1/servers/{server_id}')
+            return False, "Response missing 'credentials' field"
+        
+        # Create a credential
+        cred_data = {
+            'name': 'Test SSH Password',
+            'type': 'ssh_password',
+            'username': 'testuser',
+            'password': 'testpass123'
+        }
+        status, data = self._request('POST', f'/api/v1/servers/{server_id}/credentials', cred_data)
+        if status not in [200, 201]:
+            self._request('DELETE', f'/api/v1/servers/{server_id}')
+            return False, f"Failed to create credential: {status}"
+        
+        cred_id = data.get('credential', {}).get('id')
+        
+        # Cleanup
+        if cred_id:
+            self._request('DELETE', f'/api/v1/servers/{server_id}/credentials/{cred_id}')
+        self._request('DELETE', f'/api/v1/servers/{server_id}')
+        
+        return True, "Server credentials endpoints working"
+
     # ==================== Alert Rules Tests ====================
     
     def test_alert_rules_requires_auth(self) -> tuple[bool, str]:
@@ -561,6 +615,39 @@ class PulseTestSuite:
         
         return True, "Notification channel deleted successfully"
 
+    # ==================== Key Management Tests ====================
+
+    def test_generate_key(self) -> tuple[bool, str]:
+        """Test SSH key generation"""
+        if not self.access_token:
+            status, data = self._request('POST', '/api/v1/auth/login', {
+                'username': 'admin',
+                'password': 'admin123'
+            })
+            if status != 200:
+                return False, f"Login failed: {status}"
+            self.access_token = data.get('access_token')
+
+        key_data = {
+            'name': 'Test Key',
+            'key_type': 'ed25519'
+        }
+
+        status, data = self._request('POST', '/api/v1/keys/generate', key_data)
+        if status not in [200, 201]:
+            return False, f"Expected 200 or 201, got {status}"
+
+        if 'public_key' not in data:
+            return False, "Response missing 'public_key' field"
+        if 'private_key' not in data:
+            return False, "Response missing 'private_key' field"
+        if 'ssh-ed25519' not in data['public_key']:
+            return False, "Public key does not look like ed25519"
+        if 'OPENSSH PRIVATE KEY' not in data['private_key']:
+            return False, "Private key does not look like OpenSSH format"
+
+        return True, "SSH key generated successfully"
+
     # ==================== Web App Tests ====================
     
     def test_web_app_serves_html(self) -> tuple[bool, str]:
@@ -653,6 +740,7 @@ class PulseTestSuite:
         self.run_test("Update server", self.test_servers_update)
         self.run_test("Get server metrics", self.test_server_metrics)
         self.run_test("Get server containers", self.test_server_containers)
+        self.run_test("Server credentials CRUD", self.test_server_credentials)
         self.run_test("Delete server", self.test_servers_delete)
         
         # Alert Rules Tests
@@ -675,6 +763,11 @@ class PulseTestSuite:
         self.run_test("List notification channels", self.test_notification_channels_list)
         self.run_test("Create notification channel", self.test_notification_channels_create)
         self.run_test("Delete notification channel", self.test_notification_channels_delete)
+
+        # Key Management Tests
+        print(f"\n{BOLD}Key Management API Tests{RESET}")
+        print("-" * 40)
+        self.run_test("Generate SSH key", self.test_generate_key)
         
         # Web App Tests
         if self.web_url:

@@ -64,6 +64,7 @@ func main() {
 	auditRepo := repository.NewAuditLogRepository(database.Pool)
 	serverRepo := repository.NewServerRepository(database.Pool)
 	alertRepo := repository.NewAlertRepository(database.Pool)
+	credentialRepo := repository.NewCredentialRepository(database.Pool)
 
 	// Initialize auth service
 	authConfig := auth.DefaultConfig(cfg.ServiceNodeSecret)
@@ -75,6 +76,8 @@ func main() {
 	alertHandler := api.NewAlertHandler(alertRepo)
 	metricsHandler := api.NewMetricsHandler(serverRepo)
 	containerHandler := api.NewContainerHandler(serverRepo)
+	credentialHandler := api.NewCredentialHandler(credentialRepo)
+	keyHandler := api.NewKeyHandler()
 
 	r := chi.NewRouter()
 
@@ -120,6 +123,15 @@ func main() {
 			r.Get("/servers/{id}/containers/{containerId}/stats", containerHandler.GetContainerStats)
 			r.Post("/servers/{id}/containers/{containerId}/{action}", containerHandler.ContainerAction)
 			r.Get("/servers/{id}/containers/{containerId}/logs", containerHandler.GetContainerLogs)
+
+			// Server credential routes
+			r.Get("/servers/{id}/credentials", credentialHandler.ListForServer)
+			r.Post("/servers/{id}/credentials", credentialHandler.Create)
+			r.Delete("/servers/{id}/credentials/{credentialId}", credentialHandler.Delete)
+			r.Post("/servers/{id}/credentials/{credentialId}/default", credentialHandler.SetDefault)
+
+			// Key management routes
+			r.Post("/keys/generate", keyHandler.GenerateKey)
 
 			// Alert rules routes
 			r.Get("/alerts/rules", alertHandler.ListAlertRules)

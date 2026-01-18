@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -42,31 +43,20 @@ func (h *MetricsHandler) GetCurrentMetrics(w http.ResponseWriter, r *http.Reques
 	}
 
 	// TODO: Fetch actual metrics from the server via SSH/agent
-	// For now, return placeholder metrics
+	// For now, return placeholder metrics in the format expected by the frontend
 	metrics := map[string]interface{}{
-		"cpu": map[string]interface{}{
-			"usage_percent": 0.0,
-			"cores":         0,
-			"model":         "Unknown",
-		},
-		"memory": map[string]interface{}{
-			"total_bytes":     0,
-			"used_bytes":      0,
-			"available_bytes": 0,
-			"usage_percent":   0.0,
-		},
-		"disk": map[string]interface{}{
-			"total_bytes":   0,
-			"used_bytes":    0,
-			"free_bytes":    0,
-			"usage_percent": 0.0,
-		},
-		"network": map[string]interface{}{
-			"bytes_sent":     0,
-			"bytes_received": 0,
-		},
-		"uptime_seconds": 0,
-		"load_average":   []float64{0, 0, 0},
+		"cpu_percent":        0.0,
+		"memory_percent":     0.0,
+		"memory_used_bytes":  0,
+		"memory_total_bytes": 0,
+		"disk_percent":       0.0,
+		"disk_used_bytes":    0,
+		"disk_total_bytes":   0,
+		"load_avg_1":         0.0,
+		"load_avg_5":         0.0,
+		"load_avg_15":        0.0,
+		"uptime":             0,
+		"timestamp":          time.Now().UTC().Format(time.RFC3339),
 	}
 
 	w.Header().Set("Content-Type", "application/json")

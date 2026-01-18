@@ -111,6 +111,7 @@ func main() {
 			r.Post("/servers", serverHandler.Create)
 			r.Get("/servers/{id}", serverHandler.Get)
 			r.Put("/servers/{id}", serverHandler.Update)
+			r.Patch("/servers/{id}", serverHandler.Update)
 			r.Delete("/servers/{id}", serverHandler.Delete)
 			r.Post("/servers/{id}/test", serverHandler.TestConnection)
 

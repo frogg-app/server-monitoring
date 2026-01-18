@@ -116,8 +116,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthAuthenticated(loginResponse.user);
     } on DioException catch (e) {
       state = AuthError(ApiException.fromDioError(e).message);
+    } on FormatException catch (e) {
+      state = AuthError('Invalid server response: ${e.message}');
     } catch (e) {
-      state = AuthError(e.toString());
+      state = AuthError('Login failed: ${e.toString()}');
     }
   }
 

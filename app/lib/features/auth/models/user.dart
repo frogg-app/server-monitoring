@@ -23,18 +23,32 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final username = json['username'];
+    final email = json['email'];
+    final role = json['role'];
+    final createdAt = json['created_at'];
+    final updatedAt = json['updated_at'];
+    
+    if (id == null || id is! String) {
+      throw FormatException('Invalid or missing user id');
+    }
+    if (username == null || username is! String) {
+      throw FormatException('Invalid or missing username');
+    }
+    
     return User(
-      id: json['id'] as String,
-      username: json['username'] as String,
-      email: json['email'] as String,
+      id: id,
+      username: username,
+      email: email is String ? email : '',
       displayName: json['display_name'] as String?,
-      role: json['role'] as String,
+      role: role is String ? role : 'user',
       isActive: json['is_active'] as bool? ?? true,
       lastLoginAt: json['last_login_at'] != null
-          ? DateTime.parse(json['last_login_at'] as String)
+          ? DateTime.tryParse(json['last_login_at'] as String)
           : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      createdAt: createdAt is String ? DateTime.parse(createdAt) : DateTime.now(),
+      updatedAt: updatedAt is String ? DateTime.parse(updatedAt) : DateTime.now(),
     );
   }
 
@@ -110,11 +124,23 @@ class AuthTokens {
   });
 
   factory AuthTokens.fromJson(Map<String, dynamic> json) {
+    final accessToken = json['access_token'];
+    final refreshToken = json['refresh_token'];
+    final expiresIn = json['expires_in'];
+    final tokenType = json['token_type'];
+    
+    if (accessToken == null || accessToken is! String) {
+      throw FormatException('Invalid or missing access_token in response');
+    }
+    if (refreshToken == null || refreshToken is! String) {
+      throw FormatException('Invalid or missing refresh_token in response');
+    }
+    
     return AuthTokens(
-      accessToken: json['access_token'] as String,
-      refreshToken: json['refresh_token'] as String,
-      expiresIn: json['expires_in'] as int,
-      tokenType: json['token_type'] as String,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
+      expiresIn: expiresIn is int ? expiresIn : 3600,
+      tokenType: tokenType is String ? tokenType : 'Bearer',
     );
   }
 
@@ -139,9 +165,14 @@ class LoginResponse {
   });
 
   factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final userData = json['user'];
+    if (userData == null || userData is! Map<String, dynamic>) {
+      throw FormatException('Invalid or missing user data in login response');
+    }
+    
     return LoginResponse(
       tokens: AuthTokens.fromJson(json),
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      user: User.fromJson(userData),
     );
   }
 }

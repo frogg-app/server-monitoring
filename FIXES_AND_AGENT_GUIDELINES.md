@@ -127,26 +127,6 @@ New Tasks (added 2026-01-17)
   - Keep docs small and iterative; expand later.
 
 
-### TASK: TASK-0009 - Make Edit Server form persist and configure all options
-
-- ID: TASK-0009
-- Status: not-started
-- Priority: P0
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: app/lib/features/servers/**, service-node/internal/api/servers_handler.go, service-node/internal/models/servers.go, service-node/internal/repository/servers_repository.go
-- Description: |
-  The Edit Server action currently does nothing. Implement full edit flow on frontend and backend so users can modify all server properties (name, hostname, port, folder, tags, description, auth settings).
-- Acceptance Criteria: |
-  - Edit Server UI saves changes and the backend persists them.
-  - After editing, the server detail page reflects updated fields immediately.
-- Tests/Commands: |
-  - Use the UI to edit a server and verify via `curl GET /api/v1/servers/{id}` the fields updated.
-  - Add integration test for server update (PATCH/PUT returns 200 and persisted fields).
-- Notes: |
-  - Ensure validation and clear error messaging for invalid inputs.
-
-
 ### TASK: TASK-0010 - Add per-server auth configuration (password or SSH key)
 
 - ID: TASK-0010

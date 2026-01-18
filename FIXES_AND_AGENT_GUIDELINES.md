@@ -127,27 +127,6 @@ New Tasks (added 2026-01-17)
   - Keep docs small and iterative; expand later.
 
 
-### TASK: TASK-0012 - Tagging, folders, quick filtering, and Unknown category
-
-- ID: TASK-0012
-- Status: not-started
-- Priority: P0
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: service-node/internal/models/servers.go, service-node/internal/api/servers_handler.go, app/lib/features/servers/**, app/lib/features/servers/list.dart, tests/integration_test.py
-- Description: |
-  Add server tags and folder categorization, implement text-based quick filtering (search across tags/name/description/folder), and introduce an "Unknown" status for servers never connected. The Unknown status should only appear in the status selector if at least one server qualifies.
-- Acceptance Criteria: |
-  - Servers can be assigned tags and folders via UI/API.
-  - Server list supports typing a quick filter that matches tags, name, description, or folder.
-  - An "Unknown" status group is shown only when one or more servers have never connected.
-- Tests/Commands: |
-  - Create servers with tags and folders, then use UI filter and verify results.
-  - `curl GET /api/v1/servers?filter=text` returns filtered list.
-- Notes: |
-  - Consider indexing/tag storage format (simple comma-separated tags or normalized tags table) depending on expected scale.
-
-
 ### TASK: TASK-0013 - Scan for "coming soon" placeholders and implement sequentially
 
 - ID: TASK-0013

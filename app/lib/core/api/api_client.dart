@@ -10,6 +10,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 });
 
 /// Provider for secure storage
+/// On web, this uses localStorage with encryption
+/// On mobile, it uses platform-specific secure storage
 final secureStorageProvider = Provider<FlutterSecureStorage>((ref) {
   return const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),

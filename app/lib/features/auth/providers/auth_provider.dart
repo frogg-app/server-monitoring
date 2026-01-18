@@ -118,15 +118,21 @@ class AuthNotifier extends StateNotifier<AuthState> {
         response.data as Map<String, dynamic>,
       );
 
-      // Store tokens
-      await _storage.write(
-        key: AuthStorageKeys.accessToken,
-        value: loginResponse.tokens.accessToken,
-      );
-      await _storage.write(
-        key: AuthStorageKeys.refreshToken,
-        value: loginResponse.tokens.refreshToken,
-      );
+      // Store tokens - wrap in try-catch for web storage issues
+      try {
+        await _storage.write(
+          key: AuthStorageKeys.accessToken,
+          value: loginResponse.tokens.accessToken,
+        );
+        await _storage.write(
+          key: AuthStorageKeys.refreshToken,
+          value: loginResponse.tokens.refreshToken,
+        );
+      } catch (storageError) {
+        // Storage might fail on web in certain browser modes (incognito, etc.)
+        // Continue anyway as we have tokens in memory
+        print('Warning: Failed to persist tokens: $storageError');
+      }
 
       // Set tokens in API client
       _apiClient.setAccessToken(loginResponse.tokens.accessToken);
@@ -137,6 +143,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = AuthError(ApiException.fromDioError(e).message);
     } on FormatException catch (e) {
       state = AuthError('Invalid server response: ${e.message}');
+    } on TypeError catch (e) {
+      // This catches null check operator errors
+      state = AuthError('Response parsing error: ${e.toString()}');
     } catch (e) {
       state = AuthError('Login failed: ${e.toString()}');
     }

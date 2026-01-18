@@ -152,6 +152,60 @@ class PulseTestSuite:
             return False, f"Expected 400 or 401, got {status}"
         return True, "Missing fields rejected"
     
+    def test_login_valid_credentials(self) -> tuple[bool, str]:
+        """Test login with valid credentials and validate response format"""
+        status, data = self._request('POST', '/api/v1/auth/login', {
+            'username': 'admin',
+            'password': 'admin123'
+        })
+        if status != 200:
+            return False, f"Expected 200, got {status}"
+        
+        # Validate response has all required fields for frontend
+        # These are the exact fields the Flutter app expects
+        required_token_fields = ['access_token', 'refresh_token', 'expires_in', 'token_type']
+        for field in required_token_fields:
+            if field not in data:
+                return False, f"Missing required field: {field}"
+            if data[field] is None:
+                return False, f"Field {field} is null"
+        
+        # Validate token types
+        if not isinstance(data['access_token'], str) or len(data['access_token']) < 10:
+            return False, "access_token must be a non-empty string"
+        if not isinstance(data['refresh_token'], str) or len(data['refresh_token']) < 10:
+            return False, "refresh_token must be a non-empty string"
+        if not isinstance(data['expires_in'], int) or data['expires_in'] <= 0:
+            return False, "expires_in must be a positive integer"
+        if data['token_type'] != 'Bearer':
+            return False, f"Expected token_type 'Bearer', got '{data['token_type']}'"
+        
+        # Validate user object
+        if 'user' not in data:
+            return False, "Missing 'user' object in response"
+        if data['user'] is None:
+            return False, "'user' object is null"
+        if not isinstance(data['user'], dict):
+            return False, "'user' must be an object/dict"
+        
+        user = data['user']
+        required_user_fields = ['id', 'username', 'email', 'role', 'is_active', 'created_at', 'updated_at']
+        for field in required_user_fields:
+            if field not in user:
+                return False, f"Missing required user field: {field}"
+        
+        # Validate user field types (same checks as Flutter frontend)
+        if not isinstance(user['id'], str) or len(user['id']) < 1:
+            return False, "user.id must be a non-empty string (UUID)"
+        if not isinstance(user['username'], str) or len(user['username']) < 1:
+            return False, "user.username must be a non-empty string"
+        
+        # Store tokens for subsequent tests
+        self.access_token = data['access_token']
+        self.refresh_token = data['refresh_token']
+        
+        return True, f"Login successful for user '{user['username']}'"
+    
     def test_protected_endpoint_without_auth(self) -> tuple[bool, str]:
         """Test accessing protected endpoint without authentication"""
         old_token = self.access_token
@@ -725,6 +779,7 @@ class PulseTestSuite:
         print("-" * 40)
         self.run_test("Login - invalid credentials", self.test_login_invalid_credentials)
         self.run_test("Login - missing fields", self.test_login_missing_fields)
+        self.run_test("Login - valid credentials (format validation)", self.test_login_valid_credentials)
         self.run_test("Protected endpoint - no auth", self.test_protected_endpoint_without_auth)
         self.run_test("Protected endpoint - invalid token", self.test_protected_endpoint_invalid_token)
         self.run_test("Logout - without token", self.test_logout_without_token)

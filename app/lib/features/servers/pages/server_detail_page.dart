@@ -137,7 +137,23 @@ class ServerDetailPage extends ConsumerWidget {
   void _handleMenuAction(BuildContext context, WidgetRef ref, String action) async {
     switch (action) {
       case 'edit':
-        // TODO: Show edit dialog
+        final serverState = ref.read(serverDetailProvider(serverId));
+        if (serverState is ServerDetailLoaded) {
+          final result = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => EditServerDialog(
+              server: serverState.server,
+              onSave: (request) async {
+                await ref.read(serverDetailProvider(serverId).notifier).updateServer(request);
+              },
+            ),
+          );
+          if (result == true && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Server updated successfully')),
+            );
+          }
+        }
         break;
       case 'test':
         final success = await ref
@@ -740,6 +756,230 @@ class _AddCredentialDialogState extends ConsumerState<_AddCredentialDialog> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
+
+/// Edit server dialog
+class EditServerDialog extends StatefulWidget {
+  final Server server;
+  final Future<void> Function(UpdateServerRequest request) onSave;
+
+  const EditServerDialog({
+    super.key,
+    required this.server,
+    required this.onSave,
+  });
+
+  @override
+  State<EditServerDialog> createState() => _EditServerDialogState();
+}
+
+class _EditServerDialogState extends State<EditServerDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _hostnameController;
+  late final TextEditingController _portController;
+  late final TextEditingController _descriptionController;
+  late final TextEditingController _tagsController;
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.server.name);
+    _hostnameController = TextEditingController(text: widget.server.hostname);
+    _portController = TextEditingController(text: widget.server.port.toString());
+    _descriptionController = TextEditingController(text: widget.server.description ?? '');
+    _tagsController = TextEditingController(text: widget.server.tags.join(', '));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _hostnameController.dispose();
+    _portController.dispose();
+    _descriptionController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return AlertDialog(
+      title: const Text('Edit Server'),
+      content: SizedBox(
+        width: 400,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_error != null) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: theme.colorScheme.onErrorContainer),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: TextStyle(color: theme.colorScheme.onErrorContainer),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    hintText: 'My Server',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !_isLoading,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _hostnameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Hostname / IP',
+                    hintText: '192.168.1.100',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !_isLoading,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a hostname or IP';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _portController,
+                  decoration: const InputDecoration(
+                    labelText: 'SSH Port',
+                    hintText: '22',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  enabled: !_isLoading,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a port';
+                    }
+                    final port = int.tryParse(value);
+                    if (port == null || port < 1 || port > 65535) {
+                      return 'Please enter a valid port (1-65535)';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    hintText: 'Web server in living room',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                  enabled: !_isLoading,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Tags (comma-separated)',
+                    hintText: 'production, web, docker',
+                    border: OutlineInputBorder(),
+                  ),
+                  enabled: !_isLoading,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isLoading ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isLoading ? null : _submit,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _submit() async {
+    final formState = _formKey.currentState;
+    if (formState == null || !formState.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Parse tags from comma-separated string
+      final tagsText = _tagsController.text.trim();
+      final tags = tagsText.isEmpty
+          ? <String>[]
+          : tagsText.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+
+      final request = UpdateServerRequest(
+        name: _nameController.text.trim(),
+        hostname: _hostnameController.text.trim(),
+        port: int.parse(_portController.text.trim()),
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        tags: tags,
+      );
+
+      await widget.onSave(request);
+      
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to update server: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 }

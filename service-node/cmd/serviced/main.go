@@ -21,6 +21,7 @@ import (
 	"github.com/pulse-server/service-node/internal/db"
 	"github.com/pulse-server/service-node/internal/middleware"
 	"github.com/pulse-server/service-node/internal/repository"
+	"github.com/pulse-server/service-node/internal/vault"
 )
 
 //go:embed migrations/*.sql
@@ -65,6 +66,13 @@ func main() {
 	serverRepo := repository.NewServerRepository(database.Pool)
 	alertRepo := repository.NewAlertRepository(database.Pool)
 	credentialRepo := repository.NewCredentialRepository(database.Pool)
+	keyRepo := repository.NewKeyRepository(database.Pool)
+
+	// Initialize vault for encryption
+	credVault, err := vault.NewFromString(cfg.ServiceNodeSecret)
+	if err != nil {
+		log.Fatalf("Failed to initialize vault: %v", err)
+	}
 
 	// Initialize auth service
 	authConfig := auth.DefaultConfig(cfg.ServiceNodeSecret)
@@ -77,7 +85,7 @@ func main() {
 	metricsHandler := api.NewMetricsHandler(serverRepo)
 	containerHandler := api.NewContainerHandler(serverRepo)
 	credentialHandler := api.NewCredentialHandler(credentialRepo)
-	keyHandler := api.NewKeyHandler()
+	keyHandler := api.NewKeyHandler(keyRepo, credVault)
 
 	r := chi.NewRouter()
 
@@ -133,6 +141,14 @@ func main() {
 
 			// Key management routes
 			r.Post("/keys/generate", keyHandler.GenerateKey)
+			r.Get("/keys", keyHandler.ListKeys)
+			r.Get("/keys/{id}", keyHandler.GetKey)
+			r.Delete("/keys/{id}", keyHandler.DeleteKey)
+			r.Get("/keys/{id}/download", keyHandler.DownloadPrivateKey)
+			r.Get("/keys/{id}/deployments", keyHandler.ListDeployments)
+			
+			// Key deployment to servers
+			r.Post("/servers/{id}/keys/{keyId}/deploy", keyHandler.DeployKey)
 
 			// Alert rules routes
 			r.Get("/alerts/rules", alertHandler.ListAlertRules)

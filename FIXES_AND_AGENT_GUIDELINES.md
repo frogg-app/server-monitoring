@@ -87,26 +87,6 @@ If you're unsure about adding or removing a task, open a PR and request review f
 New Tasks (added 2026-01-17)
 -------------------------
 
-### TASK: TASK-0006 - Remove "Source code" link from UI
-
-- ID: TASK-0006
-- Status: not-started
-- Priority: P1
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: app/web/**, app/lib/widgets/header.dart, README.md
-- Description: |
-  The web UI currently exposes a "Source code" link which points directly at the repository. Remove or replace this link with a pointer to internal documentation to avoid exposing the repo link publicly.
-- Acceptance Criteria: |
-  - The web UI no longer shows a clickable "Source code" link that points to the repo.
-  - A documentation link is present and navigates to the local docs or README.
-- Tests/Commands: |
-  - Open the web UI and verify the header/menu no longer contains the source link.
-  - `grep -R "Source code" -n app || true`
-- Notes: |
-  - This is primarily a UI/navigation change; no DB work required.
-
-
 ### TASK: TASK-0007 - Build basic documentation and connect the link
 
 - ID: TASK-0007

@@ -100,12 +100,14 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server := &models.Server{
-		Name:        req.Name,
-		Hostname:    req.Hostname,
-		Port:        req.Port,
-		Description: req.Description,
-		Tags:        req.Tags,
-		CreatedBy:   createdBy,
+		Name:                req.Name,
+		Hostname:            req.Hostname,
+		Port:                req.Port,
+		Description:         req.Description,
+		Tags:                req.Tags,
+		AuthMethod:          req.AuthMethod,
+		DefaultCredentialID: req.DefaultCredentialID,
+		CreatedBy:           createdBy,
 	}
 
 	if server.Port == 0 {

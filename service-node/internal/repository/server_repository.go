@@ -25,8 +25,8 @@ func NewServerRepository(pool *pgxpool.Pool) *ServerRepository {
 // Create inserts a new server into the database.
 func (r *ServerRepository) Create(ctx context.Context, server *models.Server) error {
 	query := `
-		INSERT INTO servers (id, name, hostname, port, description, tags, status, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO servers (id, name, hostname, port, description, tags, status, auth_method, default_credential_id, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING created_at, updated_at
 	`
 
@@ -38,6 +38,9 @@ func (r *ServerRepository) Create(ctx context.Context, server *models.Server) er
 	}
 	if server.Status == "" {
 		server.Status = models.StatusUnknown
+	}
+	if server.AuthMethod == "" {
+		server.AuthMethod = models.AuthMethodPassword
 	}
 
 	tagsJSON, err := json.Marshal(server.Tags)
@@ -53,6 +56,8 @@ func (r *ServerRepository) Create(ctx context.Context, server *models.Server) er
 		server.Description,
 		tagsJSON,
 		server.Status,
+		server.AuthMethod,
+		server.DefaultCredentialID,
 		server.CreatedBy,
 	).Scan(&server.CreatedAt, &server.UpdatedAt)
 
@@ -70,6 +75,7 @@ func (r *ServerRepository) Create(ctx context.Context, server *models.Server) er
 func (r *ServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Server, error) {
 	query := `
 		SELECT id, name, hostname, port, description, tags, status, 
+		       auth_method, default_credential_id,
 		       last_seen_at, created_by, created_at, updated_at
 		FROM servers
 		WHERE id = $1
@@ -86,6 +92,8 @@ func (r *ServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.S
 		&server.Description,
 		&tagsJSON,
 		&server.Status,
+		&server.AuthMethod,
+		&server.DefaultCredentialID,
 		&server.LastSeenAt,
 		&server.CreatedBy,
 		&server.CreatedAt,
@@ -138,12 +146,23 @@ func (r *ServerRepository) Update(ctx context.Context, id uuid.UUID, update *mod
 		query += fmt.Sprintf(", tags = $%d", argCount)
 		args = append(args, tagsJSON)
 	}
+	if update.AuthMethod != nil {
+		argCount++
+		query += fmt.Sprintf(", auth_method = $%d", argCount)
+		args = append(args, *update.AuthMethod)
+	}
+	if update.DefaultCredentialID != nil {
+		argCount++
+		query += fmt.Sprintf(", default_credential_id = $%d", argCount)
+		args = append(args, *update.DefaultCredentialID)
+	}
 
 	argCount++
 	query += fmt.Sprintf(" WHERE id = $%d", argCount)
 	args = append(args, id)
 
 	query += ` RETURNING id, name, hostname, port, description, tags, status, 
+	           auth_method, default_credential_id,
 	           last_seen_at, created_by, created_at, updated_at`
 
 	server := &models.Server{}
@@ -157,6 +176,8 @@ func (r *ServerRepository) Update(ctx context.Context, id uuid.UUID, update *mod
 		&server.Description,
 		&tagsJSON,
 		&server.Status,
+		&server.AuthMethod,
+		&server.DefaultCredentialID,
 		&server.LastSeenAt,
 		&server.CreatedBy,
 		&server.CreatedAt,
@@ -214,6 +235,7 @@ func (r *ServerRepository) List(ctx context.Context, status *models.ServerStatus
 
 	query := `
 		SELECT id, name, hostname, port, description, tags, status, 
+		       auth_method, default_credential_id,
 		       last_seen_at, created_by, created_at, updated_at
 		FROM servers
 		WHERE ($1::varchar IS NULL OR status = $1)
@@ -246,6 +268,8 @@ func (r *ServerRepository) List(ctx context.Context, status *models.ServerStatus
 			&server.Description,
 			&tagsJSON,
 			&server.Status,
+			&server.AuthMethod,
+			&server.DefaultCredentialID,
 			&server.LastSeenAt,
 			&server.CreatedBy,
 			&server.CreatedAt,

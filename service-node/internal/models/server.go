@@ -17,37 +17,52 @@ const (
 	StatusUnknown ServerStatus = "unknown"
 )
 
+// AuthMethod represents the authentication method for a server.
+type AuthMethod string
+
+const (
+	AuthMethodPassword AuthMethod = "password"
+	AuthMethodSSHKey   AuthMethod = "ssh_key"
+	AuthMethodNone     AuthMethod = "none"
+)
+
 // Server represents a monitored server.
 type Server struct {
-	ID          uuid.UUID    `json:"id"`
-	Name        string       `json:"name"`
-	Hostname    string       `json:"hostname"`
-	Port        int          `json:"port"`
-	Description string       `json:"description,omitempty"`
-	Tags        []string     `json:"tags"`
-	Status      ServerStatus `json:"status"`
-	LastSeenAt  *time.Time   `json:"last_seen_at,omitempty"`
-	CreatedBy   *uuid.UUID   `json:"created_by,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
+	ID                  uuid.UUID    `json:"id"`
+	Name                string       `json:"name"`
+	Hostname            string       `json:"hostname"`
+	Port                int          `json:"port"`
+	Description         string       `json:"description,omitempty"`
+	Tags                []string     `json:"tags"`
+	Status              ServerStatus `json:"status"`
+	AuthMethod          AuthMethod   `json:"auth_method"`
+	DefaultCredentialID *uuid.UUID   `json:"default_credential_id,omitempty"`
+	LastSeenAt          *time.Time   `json:"last_seen_at,omitempty"`
+	CreatedBy           *uuid.UUID   `json:"created_by,omitempty"`
+	CreatedAt           time.Time    `json:"created_at"`
+	UpdatedAt           time.Time    `json:"updated_at"`
 }
 
 // ServerCreate is used when creating a new server.
 type ServerCreate struct {
-	Name        string   `json:"name" validate:"required,min=1,max=128"`
-	Hostname    string   `json:"hostname" validate:"required"`
-	Port        int      `json:"port,omitempty"`
-	Description string   `json:"description,omitempty"`
-	Tags        []string `json:"tags,omitempty"`
+	Name                string     `json:"name" validate:"required,min=1,max=128"`
+	Hostname            string     `json:"hostname" validate:"required"`
+	Port                int        `json:"port,omitempty"`
+	Description         string     `json:"description,omitempty"`
+	Tags                []string   `json:"tags,omitempty"`
+	AuthMethod          AuthMethod `json:"auth_method,omitempty"`
+	DefaultCredentialID *uuid.UUID `json:"default_credential_id,omitempty"`
 }
 
 // ServerUpdate is used when updating an existing server.
 type ServerUpdate struct {
-	Name        *string   `json:"name,omitempty"`
-	Hostname    *string   `json:"hostname,omitempty"`
-	Port        *int      `json:"port,omitempty"`
-	Description *string   `json:"description,omitempty"`
-	Tags        *[]string `json:"tags,omitempty"`
+	Name                *string     `json:"name,omitempty"`
+	Hostname            *string     `json:"hostname,omitempty"`
+	Port                *int        `json:"port,omitempty"`
+	Description         *string     `json:"description,omitempty"`
+	Tags                *[]string   `json:"tags,omitempty"`
+	AuthMethod          *AuthMethod `json:"auth_method,omitempty"`
+	DefaultCredentialID *uuid.UUID  `json:"default_credential_id,omitempty"`
 }
 
 // CredentialType represents the type of credential.

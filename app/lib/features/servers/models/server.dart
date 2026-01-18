@@ -13,6 +13,48 @@ enum ServerStatus {
   }
 }
 
+/// Server authentication method
+enum AuthMethod {
+  password,
+  sshKey,
+  none;
+
+  factory AuthMethod.fromString(String method) {
+    switch (method) {
+      case 'password':
+        return AuthMethod.password;
+      case 'ssh_key':
+        return AuthMethod.sshKey;
+      case 'none':
+        return AuthMethod.none;
+      default:
+        return AuthMethod.password;
+    }
+  }
+
+  String toJsonString() {
+    switch (this) {
+      case AuthMethod.password:
+        return 'password';
+      case AuthMethod.sshKey:
+        return 'ssh_key';
+      case AuthMethod.none:
+        return 'none';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case AuthMethod.password:
+        return 'Password';
+      case AuthMethod.sshKey:
+        return 'SSH Key';
+      case AuthMethod.none:
+        return 'None';
+    }
+  }
+}
+
 /// Server model
 class Server {
   final String id;
@@ -22,6 +64,8 @@ class Server {
   final String? description;
   final List<String> tags;
   final ServerStatus status;
+  final AuthMethod authMethod;
+  final String? defaultCredentialId;
   final DateTime? lastSeenAt;
   final String? createdBy;
   final DateTime createdAt;
@@ -35,6 +79,8 @@ class Server {
     this.description,
     required this.tags,
     required this.status,
+    this.authMethod = AuthMethod.password,
+    this.defaultCredentialId,
     this.lastSeenAt,
     this.createdBy,
     required this.createdAt,
@@ -50,6 +96,8 @@ class Server {
       description: json['description'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
       status: ServerStatus.fromString(json['status'] as String? ?? 'unknown'),
+      authMethod: AuthMethod.fromString(json['auth_method'] as String? ?? 'password'),
+      defaultCredentialId: json['default_credential_id'] as String?,
       lastSeenAt: json['last_seen_at'] != null
           ? DateTime.parse(json['last_seen_at'] as String)
           : null,
@@ -68,6 +116,8 @@ class Server {
       'description': description,
       'tags': tags,
       'status': status.name,
+      'auth_method': authMethod.toJsonString(),
+      'default_credential_id': defaultCredentialId,
       'last_seen_at': lastSeenAt?.toIso8601String(),
       'created_by': createdBy,
       'created_at': createdAt.toIso8601String(),
@@ -83,6 +133,8 @@ class Server {
     String? description,
     List<String>? tags,
     ServerStatus? status,
+    AuthMethod? authMethod,
+    String? defaultCredentialId,
     DateTime? lastSeenAt,
     String? createdBy,
     DateTime? createdAt,
@@ -96,6 +148,8 @@ class Server {
       description: description ?? this.description,
       tags: tags ?? this.tags,
       status: status ?? this.status,
+      authMethod: authMethod ?? this.authMethod,
+      defaultCredentialId: defaultCredentialId ?? this.defaultCredentialId,
       lastSeenAt: lastSeenAt ?? this.lastSeenAt,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
@@ -148,6 +202,8 @@ class ServerWithMetrics extends Server {
     super.description,
     required super.tags,
     required super.status,
+    super.authMethod,
+    super.defaultCredentialId,
     super.lastSeenAt,
     super.createdBy,
     required super.createdAt,
@@ -167,6 +223,8 @@ class ServerWithMetrics extends Server {
       description: json['description'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
       status: ServerStatus.fromString(json['status'] as String? ?? 'unknown'),
+      authMethod: AuthMethod.fromString(json['auth_method'] as String? ?? 'password'),
+      defaultCredentialId: json['default_credential_id'] as String?,
       lastSeenAt: json['last_seen_at'] != null
           ? DateTime.parse(json['last_seen_at'] as String)
           : null,
@@ -199,6 +257,8 @@ class CreateServerRequest {
   final int port;
   final String? description;
   final List<String>? tags;
+  final AuthMethod? authMethod;
+  final String? defaultCredentialId;
 
   const CreateServerRequest({
     required this.name,
@@ -206,6 +266,8 @@ class CreateServerRequest {
     this.port = 22,
     this.description,
     this.tags,
+    this.authMethod,
+    this.defaultCredentialId,
   });
 
   Map<String, dynamic> toJson() {
@@ -215,6 +277,8 @@ class CreateServerRequest {
       'port': port,
       if (description != null) 'description': description,
       if (tags != null) 'tags': tags,
+      if (authMethod != null) 'auth_method': authMethod!.toJsonString(),
+      if (defaultCredentialId != null) 'default_credential_id': defaultCredentialId,
     };
   }
 }
@@ -226,6 +290,8 @@ class UpdateServerRequest {
   final int? port;
   final String? description;
   final List<String>? tags;
+  final AuthMethod? authMethod;
+  final String? defaultCredentialId;
 
   const UpdateServerRequest({
     this.name,
@@ -233,6 +299,8 @@ class UpdateServerRequest {
     this.port,
     this.description,
     this.tags,
+    this.authMethod,
+    this.defaultCredentialId,
   });
 
   Map<String, dynamic> toJson() {
@@ -242,6 +310,8 @@ class UpdateServerRequest {
       if (port != null) 'port': port,
       if (description != null) 'description': description,
       if (tags != null) 'tags': tags,
+      if (authMethod != null) 'auth_method': authMethod!.toJsonString(),
+      if (defaultCredentialId != null) 'default_credential_id': defaultCredentialId,
     };
   }
 }

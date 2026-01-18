@@ -127,27 +127,6 @@ New Tasks (added 2026-01-17)
   - Keep docs small and iterative; expand later.
 
 
-### TASK: TASK-0008 - Fix Server Details 404s (metrics & containers)
-
-- ID: TASK-0008
-- Status: not-started
-- Priority: P0
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: app/lib/features/servers/**, service-node/internal/api/server_handlers.go, service-node/cmd/serviced/main.go, tests/integration_test.py
-- Description: |
-  The Test Server details page shows DioException 404 errors for Current Metrics and Containers (see screenshot). Investigate the frontend request paths and backend routes/handlers, register missing routes, or fix response shapes.
-- Acceptance Criteria: |
-  - Metrics and Containers panels return 200 with JSON or an empty list rather than 404.
-  - The UI displays metrics and container data or empty state instead of an error card.
-- Tests/Commands: |
-  - Reproduce with curl: `curl -i http://localhost:8080/api/v1/servers/<id>/metrics`
-  - `curl -i http://localhost:8080/api/v1/servers/<id>/containers`
-  - Run integration tests that assert 200/JSON responses for these endpoints.
-- Notes: |
-  - If DB schema or migrations are required, include migrations and update repository queries.
-
-
 ### TASK: TASK-0009 - Make Edit Server form persist and configure all options
 
 - ID: TASK-0009

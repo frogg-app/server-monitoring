@@ -127,27 +127,6 @@ New Tasks (added 2026-01-17)
   - Keep docs small and iterative; expand later.
 
 
-### TASK: TASK-0011 - Implement key management (generate, store, associate, deploy)
-
-- ID: TASK-0011
-- Status: not-started
-- Priority: P0
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: service-node/internal/api/keys_handler.go, service-node/internal/repository/keys_repository.go, app/lib/features/settings/keys/**, tests/integration_test.py
-- Description: |
-  Provide key-pair generation (RSA/ED25519), secure private key storage, a UI to view/manage keys, associate keys with servers, and a server-side endpoint to deploy public keys to a server via SSH.
-- Acceptance Criteria: |
-  - Create/list/delete keys via API/UI.
-  - Generate key pairs server-side and return public key for download; private key stored encrypted or downloadable once (document security tradeoffs).
-  - Associate keys with servers and trigger a deploy action which attempts to add the public key to the server's `authorized_keys` (returns success/failure and logs).
-- Tests/Commands: |
-  - `curl -X POST /api/v1/keys/generate` to create a keypair.
-  - `curl -X POST /api/v1/servers/{id}/keys/{key_id}/deploy` to deploy.
-- Notes: |
-  - Consider using a background job for deploy operations and provide operation status endpoints.
-
-
 ### TASK: TASK-0012 - Tagging, folders, quick filtering, and Unknown category
 
 - ID: TASK-0012

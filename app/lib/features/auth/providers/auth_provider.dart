@@ -67,6 +67,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Verify token by fetching current user
       final response = await _apiClient.get(ApiEndpoints.me);
+      
+      // Safely parse response data
+      if (response.data == null) {
+        throw FormatException('Empty response from server');
+      }
+      
+      if (response.data is! Map<String, dynamic>) {
+        throw FormatException('Invalid response format from server');
+      }
+      
       final user = User.fromJson(response.data as Map<String, dynamic>);
       state = AuthAuthenticated(user);
     } on DioException catch (e) {
@@ -95,6 +105,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
         },
       );
 
+      // Safely parse response data
+      if (response.data == null) {
+        throw FormatException('Empty response from server');
+      }
+      
+      if (response.data is! Map<String, dynamic>) {
+        throw FormatException('Invalid response format from server');
+      }
+      
       final loginResponse = LoginResponse.fromJson(
         response.data as Map<String, dynamic>,
       );
@@ -155,6 +174,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final response = await _apiClient.get(ApiEndpoints.me);
+      
+      // Safely parse response data
+      if (response.data == null || response.data is! Map<String, dynamic>) {
+        return; // Keep current state on invalid response
+      }
+      
       final user = User.fromJson(response.data as Map<String, dynamic>);
       state = AuthAuthenticated(user);
     } catch (_) {

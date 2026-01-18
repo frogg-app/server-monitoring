@@ -17,13 +17,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final isLoggedIn = authState is AuthAuthenticated;
       final isLoggingIn = state.matchedLocation == '/login';
+      final isLoading = authState is AuthInitial || authState is AuthLoading;
+
+      // During initial/loading state, stay on login to avoid unauthorized API calls
+      if (isLoading && !isLoggingIn) {
+        return '/login';
+      }
 
       // If not logged in and not on login page, redirect to login
       if (!isLoggedIn && !isLoggingIn) {
-        // Allow initial/loading state to avoid flash
-        if (authState is AuthInitial || authState is AuthLoading) {
-          return null;
-        }
         return '/login';
       }
 

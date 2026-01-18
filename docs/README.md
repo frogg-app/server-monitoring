@@ -31,7 +31,7 @@ Pulse is a self-hosted server monitoring platform with real-time metrics, alerts
    ```bash
    docker compose up -d
    ```
-4. Access the web UI at `http://localhost:8080`
+4. Access the web UI at `http://localhost:32200`
 
 Default credentials:
 - Username: `admin`

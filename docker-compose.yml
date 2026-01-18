@@ -22,9 +22,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      # Use long syntax with published: 0 to let Docker assign an available random host port
+      # Publish Postgres on a fixed host port so related services are grouped
       - target: 5432
-        published: 0
+        published: 32202
         protocol: tcp
         mode: host
     healthcheck:
@@ -68,7 +68,7 @@ services:
       COLLECTION_INTERVAL: ${COLLECTION_INTERVAL:-30s}
       RETENTION_DAYS: ${RETENTION_DAYS:-30}
     ports:
-      - "${API_PORT:-8080}:8080"
+      - "${API_PORT:-32201}:8080"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -89,11 +89,8 @@ services:
       api:
         condition: service_healthy
     ports:
-      # Use dynamic port assignment to avoid conflicts
-      - target: 80
-        published: 0
-        protocol: tcp
-        mode: host
+      # Publish frontend on a fixed host port (override with WEB_PORT env)
+      - "${WEB_PORT:-32200}:80"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s

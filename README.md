@@ -46,7 +46,7 @@ cd pulse
 # Run the setup script
 ./deploy/setup.sh
 
-# Access the web UI at http://localhost:8080
+# Access the web UI at http://localhost:32200
 ```
 
 The setup script will:
@@ -77,9 +77,20 @@ DATABASE_URL=postgres://pulse:<password>@db:5432/pulse?sslmode=disable
 JWT_SECRET=<generate-32-char-secret>
 VAULT_KEY=<generate-32-char-secret>
 
+# Bind address for the API server (bind to all interfaces so LAN hosts can reach it)
+# Example: BIND_ADDR=0.0.0.0:8080
+# Default: 0.0.0.0:8080
+#
+# Frontend host port (override with WEB_PORT in .env)
+# Example: WEB_PORT=32200
+#
 # Server
 PORT=8080
 LOG_LEVEL=info
+
+# Frontend (web) host port published by Docker Compose
+# Override with `WEB_PORT` in your `.env` if needed
+WEB_PORT=32200
 ```
 
 3. **Start services:**
@@ -93,8 +104,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 4. **Access the application:**
-   - Web UI: http://localhost:8080
-   - API: http://localhost:8080/api/v1
+  - Web UI: http://localhost:32200
+  - API: http://localhost:32201/api/v1
 
 ### Default Credentials
 
@@ -109,7 +120,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 - Go 1.22+
 - Flutter 3.x
-- PostgreSQL 15+ with TimescaleDB
+PORT=32200
 - Docker (optional)
 
 ### Backend Development
@@ -346,7 +357,7 @@ docker compose exec db psql -U pulse -c "SELECT 1"
 docker compose logs api
 
 # Verify health endpoint
-curl http://localhost:8080/api/v1/health
+curl http://localhost:32201/api/v1/health
 ```
 
 ### Container Not Starting

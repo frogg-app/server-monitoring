@@ -59,11 +59,33 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/servers/:id',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: ServerDetailPage(
-                serverId: state.pathParameters['id']!,
-              ),
-            ),
+            builder: (context, state) {
+              final id = state.pathParameters['id'];
+              if (id == null) {
+                return Scaffold(
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Missing server id',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: () => context.go('/servers'),
+                          child: const Text('Back to Servers'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return ServerDetailPage(serverId: id);
+            },
           ),
           GoRoute(
             path: '/alerts',

@@ -250,3 +250,28 @@ New Tasks (added 2026-01-17)
   - Run the app locally and verify no visible "coming soon" placeholders for implemented items.
 - Notes: |
   - Start with non-invasive UI fixes (theme toggle) and progress to feature implementations (SSH terminal, docs viewer) in separate commits.
+
+
+### TASK: TASK-0014 - Fix sign-in crash: "Null check operator used on a null value"
+
+- ID: TASK-0014
+- Status: not-started
+- Priority: P0
+- Owner: unassigned
+- Created: 2026-01-18
+- Files: app/lib/features/auth/**, app/lib/features/auth/pages/login_page.dart, app/lib/features/auth/providers/login_provider.dart, app/lib/app.dart
+- Description: |
+  Users experience a runtime crash on sign-in showing "Null check operator used on a null value" (see attached screenshot). Investigate the frontend login flow (form state, provider, and any null assertions) and fix the root cause so the login form validates inputs and surfaces friendly errors instead of crashing.
+- Acceptance Criteria: |
+  - Attempting to sign in with empty or invalid inputs does not crash the app.
+  - The login form shows validation errors for missing username/password.
+  - The UI no longer displays the red error card with the null-check message during normal usage.
+  - Relevant unit/widget tests added or updated to cover the login path and null cases.
+- Tests/Commands: |
+  - Reproduce in dev: open web UI and attempt sign-in with empty fields; app should not crash.
+  - Run frontend locally: `cd app && flutter run -d web-server` and exercise login.
+  - Inspect browser console and `docker compose logs pulse-web` for runtime errors.
+  - Add widget tests: `flutter test test/widgets/login_test.dart` (if tests added).
+- Notes: |
+  - Screenshot attached by user shows the exact error text. The issue appears frontend-side (Dart/Flutter) but if backend responses are malformed, handle gracefully.
+  - Keep the task focused on the null-check crash; follow-up UX polishing can be separate.

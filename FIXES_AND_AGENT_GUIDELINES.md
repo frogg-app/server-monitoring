@@ -87,22 +87,3 @@ If you're unsure about adding or removing a task, open a PR and request review f
 New Tasks (added 2026-01-17)
 -------------------------
 
-### TASK: TASK-0007 - Build basic documentation and connect the link
-
-- ID: TASK-0007
-- Status: not-started
-- Priority: P1
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: docs/README.md, README.md, app/web/**, app/lib/widgets/header.dart
-- Description: |
-  Create a minimal documentation landing page (docs/README.md) with installation, running, and basic usage instructions. Wire the web UI documentation link to this local docs page.
-- Acceptance Criteria: |
-  - `docs/README.md` exists with Getting Started and API endpoints overview.
-  - Web UI documentation link opens the local docs (or an in-app docs view).
-- Tests/Commands: |
-  - `ls docs && sed -n '1,40p' docs/README.md`
-  - Open the web UI and click the docs link to confirm navigation.
-- Notes: |
-  - Keep docs small and iterative; expand later.
-

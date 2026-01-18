@@ -127,27 +127,6 @@ New Tasks (added 2026-01-17)
   - Keep docs small and iterative; expand later.
 
 
-### TASK: TASK-0010 - Add per-server auth configuration (password or SSH key)
-
-- ID: TASK-0010
-- Status: not-started
-- Priority: P0
-- Owner: unassigned
-- Created: 2026-01-17
-- Files: service-node/internal/models/servers.go, service-node/internal/api/servers_handler.go, migrations/*.sql, app/lib/features/servers/**, tests/integration_test.py
-- Description: |
-  Extend server model/API/UI to support selecting an authentication method per server (PASSWORD or SSH_KEY) and storing credentials accordingly (password or reference to stored key credential).
-- Acceptance Criteria: |
-  - API and DB store `auth_method` and `auth_reference` (or similar) for servers.
-  - UI allows selecting method and entering password or selecting a key from stored credentials.
-  - Integration tests cover creating/updating servers with both auth methods.
-- Tests/Commands: |
-  - `curl -X POST /api/v1/servers -d '{... "auth_method":"PASSWORD","password":"..."}'`
-  - `curl -X POST /api/v1/servers -d '{... "auth_method":"SSH_KEY","key_id":"..."}'`
-- Notes: |
-  - Private key storage must be secure; treat secrets carefully and mark required encryption/ACLs for production.
-
-
 ### TASK: TASK-0011 - Implement key management (generate, store, associate, deploy)
 
 - ID: TASK-0011

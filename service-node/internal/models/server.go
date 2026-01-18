@@ -34,6 +34,7 @@ type Server struct {
 	Port                int          `json:"port"`
 	Description         string       `json:"description,omitempty"`
 	Tags                []string     `json:"tags"`
+	Folder              string       `json:"folder,omitempty"`
 	Status              ServerStatus `json:"status"`
 	AuthMethod          AuthMethod   `json:"auth_method"`
 	DefaultCredentialID *uuid.UUID   `json:"default_credential_id,omitempty"`
@@ -50,6 +51,7 @@ type ServerCreate struct {
 	Port                int        `json:"port,omitempty"`
 	Description         string     `json:"description,omitempty"`
 	Tags                []string   `json:"tags,omitempty"`
+	Folder              string     `json:"folder,omitempty"`
 	AuthMethod          AuthMethod `json:"auth_method,omitempty"`
 	DefaultCredentialID *uuid.UUID `json:"default_credential_id,omitempty"`
 }
@@ -61,6 +63,7 @@ type ServerUpdate struct {
 	Port                *int        `json:"port,omitempty"`
 	Description         *string     `json:"description,omitempty"`
 	Tags                *[]string   `json:"tags,omitempty"`
+	Folder              *string     `json:"folder,omitempty"`
 	AuthMethod          *AuthMethod `json:"auth_method,omitempty"`
 	DefaultCredentialID *uuid.UUID  `json:"default_credential_id,omitempty"`
 }

@@ -63,6 +63,7 @@ class Server {
   final int port;
   final String? description;
   final List<String> tags;
+  final String? folder;
   final ServerStatus status;
   final AuthMethod authMethod;
   final String? defaultCredentialId;
@@ -78,6 +79,7 @@ class Server {
     required this.port,
     this.description,
     required this.tags,
+    this.folder,
     required this.status,
     this.authMethod = AuthMethod.password,
     this.defaultCredentialId,
@@ -95,6 +97,7 @@ class Server {
       port: json['port'] as int? ?? 22,
       description: json['description'] as String?,
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
+      folder: json['folder'] as String?,
       status: ServerStatus.fromString(json['status'] as String? ?? 'unknown'),
       authMethod: AuthMethod.fromString(json['auth_method'] as String? ?? 'password'),
       defaultCredentialId: json['default_credential_id'] as String?,
@@ -115,6 +118,7 @@ class Server {
       'port': port,
       'description': description,
       'tags': tags,
+      'folder': folder,
       'status': status.name,
       'auth_method': authMethod.toJsonString(),
       'default_credential_id': defaultCredentialId,
@@ -132,6 +136,7 @@ class Server {
     int? port,
     String? description,
     List<String>? tags,
+    String? folder,
     ServerStatus? status,
     AuthMethod? authMethod,
     String? defaultCredentialId,
@@ -147,6 +152,7 @@ class Server {
       port: port ?? this.port,
       description: description ?? this.description,
       tags: tags ?? this.tags,
+      folder: folder ?? this.folder,
       status: status ?? this.status,
       authMethod: authMethod ?? this.authMethod,
       defaultCredentialId: defaultCredentialId ?? this.defaultCredentialId,
@@ -257,6 +263,7 @@ class CreateServerRequest {
   final int port;
   final String? description;
   final List<String>? tags;
+  final String? folder;
   final AuthMethod? authMethod;
   final String? defaultCredentialId;
 
@@ -266,6 +273,7 @@ class CreateServerRequest {
     this.port = 22,
     this.description,
     this.tags,
+    this.folder,
     this.authMethod,
     this.defaultCredentialId,
   });
@@ -277,6 +285,7 @@ class CreateServerRequest {
       'port': port,
       if (description != null) 'description': description,
       if (tags != null) 'tags': tags,
+      if (folder != null) 'folder': folder,
       if (authMethod != null) 'auth_method': authMethod!.toJsonString(),
       if (defaultCredentialId != null) 'default_credential_id': defaultCredentialId,
     };
@@ -290,6 +299,7 @@ class UpdateServerRequest {
   final int? port;
   final String? description;
   final List<String>? tags;
+  final String? folder;
   final AuthMethod? authMethod;
   final String? defaultCredentialId;
 
@@ -299,6 +309,7 @@ class UpdateServerRequest {
     this.port,
     this.description,
     this.tags,
+    this.folder,
     this.authMethod,
     this.defaultCredentialId,
   });
@@ -310,6 +321,7 @@ class UpdateServerRequest {
       if (port != null) 'port': port,
       if (description != null) 'description': description,
       if (tags != null) 'tags': tags,
+      if (folder != null) 'folder': folder,
       if (authMethod != null) 'auth_method': authMethod!.toJsonString(),
       if (defaultCredentialId != null) 'default_credential_id': defaultCredentialId,
     };

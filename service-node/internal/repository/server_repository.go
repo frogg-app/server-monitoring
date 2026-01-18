@@ -25,8 +25,8 @@ func NewServerRepository(pool *pgxpool.Pool) *ServerRepository {
 // Create inserts a new server into the database.
 func (r *ServerRepository) Create(ctx context.Context, server *models.Server) error {
 	query := `
-		INSERT INTO servers (id, name, hostname, port, description, tags, status, auth_method, default_credential_id, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO servers (id, name, hostname, port, description, tags, folder, status, auth_method, default_credential_id, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING created_at, updated_at
 	`
 
@@ -55,6 +55,7 @@ func (r *ServerRepository) Create(ctx context.Context, server *models.Server) er
 		server.Port,
 		server.Description,
 		tagsJSON,
+		server.Folder,
 		server.Status,
 		server.AuthMethod,
 		server.DefaultCredentialID,
@@ -74,7 +75,7 @@ func (r *ServerRepository) Create(ctx context.Context, server *models.Server) er
 // GetByID retrieves a server by its ID.
 func (r *ServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.Server, error) {
 	query := `
-		SELECT id, name, hostname, port, description, tags, status, 
+		SELECT id, name, hostname, port, description, tags, folder, status, 
 		       auth_method, default_credential_id,
 		       last_seen_at, created_by, created_at, updated_at
 		FROM servers
@@ -91,6 +92,7 @@ func (r *ServerRepository) GetByID(ctx context.Context, id uuid.UUID) (*models.S
 		&server.Port,
 		&server.Description,
 		&tagsJSON,
+		&server.Folder,
 		&server.Status,
 		&server.AuthMethod,
 		&server.DefaultCredentialID,
@@ -146,6 +148,11 @@ func (r *ServerRepository) Update(ctx context.Context, id uuid.UUID, update *mod
 		query += fmt.Sprintf(", tags = $%d", argCount)
 		args = append(args, tagsJSON)
 	}
+	if update.Folder != nil {
+		argCount++
+		query += fmt.Sprintf(", folder = $%d", argCount)
+		args = append(args, *update.Folder)
+	}
 	if update.AuthMethod != nil {
 		argCount++
 		query += fmt.Sprintf(", auth_method = $%d", argCount)
@@ -161,7 +168,7 @@ func (r *ServerRepository) Update(ctx context.Context, id uuid.UUID, update *mod
 	query += fmt.Sprintf(" WHERE id = $%d", argCount)
 	args = append(args, id)
 
-	query += ` RETURNING id, name, hostname, port, description, tags, status, 
+	query += ` RETURNING id, name, hostname, port, description, tags, folder, status, 
 	           auth_method, default_credential_id,
 	           last_seen_at, created_by, created_at, updated_at`
 
@@ -175,6 +182,7 @@ func (r *ServerRepository) Update(ctx context.Context, id uuid.UUID, update *mod
 		&server.Port,
 		&server.Description,
 		&tagsJSON,
+		&server.Folder,
 		&server.Status,
 		&server.AuthMethod,
 		&server.DefaultCredentialID,
@@ -224,32 +232,50 @@ func (r *ServerRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+// ServerListOptions holds filtering options for List.
+type ServerListOptions struct {
+	Status *models.ServerStatus
+	Filter string // Text filter across name, description, tags, folder
+	Limit  int
+	Offset int
+}
+
 // List retrieves all servers with optional filtering.
-func (r *ServerRepository) List(ctx context.Context, status *models.ServerStatus, limit, offset int) ([]*models.Server, error) {
-	if limit <= 0 {
-		limit = 50
+func (r *ServerRepository) List(ctx context.Context, opts ServerListOptions) ([]*models.Server, error) {
+	if opts.Limit <= 0 {
+		opts.Limit = 50
 	}
-	if limit > 100 {
-		limit = 100
+	if opts.Limit > 100 {
+		opts.Limit = 100
 	}
 
 	query := `
-		SELECT id, name, hostname, port, description, tags, status, 
+		SELECT id, name, hostname, port, description, tags, folder, status, 
 		       auth_method, default_credential_id,
 		       last_seen_at, created_by, created_at, updated_at
 		FROM servers
 		WHERE ($1::varchar IS NULL OR status = $1)
+		  AND ($4::varchar IS NULL OR 
+		       LOWER(name) LIKE '%' || LOWER($4) || '%' OR
+		       LOWER(description) LIKE '%' || LOWER($4) || '%' OR
+		       LOWER(folder) LIKE '%' || LOWER($4) || '%' OR
+		       tags::text ILIKE '%' || $4 || '%')
 		ORDER BY name ASC
 		LIMIT $2 OFFSET $3
 	`
 
 	var statusStr *string
-	if status != nil {
-		s := string(*status)
+	if opts.Status != nil {
+		s := string(*opts.Status)
 		statusStr = &s
 	}
 
-	rows, err := r.pool.Query(ctx, query, statusStr, limit, offset)
+	var filterStr *string
+	if opts.Filter != "" {
+		filterStr = &opts.Filter
+	}
+
+	rows, err := r.pool.Query(ctx, query, statusStr, opts.Limit, opts.Offset, filterStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list servers: %w", err)
 	}
@@ -267,6 +293,7 @@ func (r *ServerRepository) List(ctx context.Context, status *models.ServerStatus
 			&server.Port,
 			&server.Description,
 			&tagsJSON,
+			&server.Folder,
 			&server.Status,
 			&server.AuthMethod,
 			&server.DefaultCredentialID,

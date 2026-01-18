@@ -27,13 +27,22 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 	
 	// Parse query parameters
 	status := r.URL.Query().Get("status")
+	filter := r.URL.Query().Get("filter")
+	
 	var statusFilter *models.ServerStatus
 	if status != "" {
 		s := models.ServerStatus(status)
 		statusFilter = &s
 	}
 
-	servers, err := h.serverRepo.List(ctx, statusFilter, 100, 0)
+	opts := repository.ServerListOptions{
+		Status: statusFilter,
+		Filter: filter,
+		Limit:  100,
+		Offset: 0,
+	}
+
+	servers, err := h.serverRepo.List(ctx, opts)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "failed to list servers")
 		return
@@ -105,6 +114,7 @@ func (h *ServerHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Port:                req.Port,
 		Description:         req.Description,
 		Tags:                req.Tags,
+		Folder:              req.Folder,
 		AuthMethod:          req.AuthMethod,
 		DefaultCredentialID: req.DefaultCredentialID,
 		CreatedBy:           createdBy,

@@ -237,14 +237,47 @@ final serverCredentialsProvider = StateNotifierProvider.family<
 /// Server filter query provider
 final serverFilterQueryProvider = StateProvider<String>((ref) => '');
 
+/// Server status filter provider (null means show all)
+final serverStatusFilterProvider = StateProvider<ServerStatus?>((ref) => null);
+
+/// Server tag filter provider (null means show all)
+final serverTagFilterProvider = StateProvider<String?>((ref) => null);
+
+/// All unique tags across all servers
+final allTagsProvider = Provider<List<String>>((ref) {
+  final serversState = ref.watch(serversProvider);
+  if (serversState is! ServersLoaded) return [];
+
+  final tagSet = <String>{};
+  for (final server in serversState.servers) {
+    tagSet.addAll(server.tags);
+  }
+  final tags = tagSet.toList()..sort();
+  return tags;
+});
+
 /// Filtered servers provider
 final filteredServersProvider = Provider<List<ServerWithMetrics>>((ref) {
   final serversState = ref.watch(serversProvider);
   final query = ref.watch(serverFilterQueryProvider).toLowerCase();
+  final statusFilter = ref.watch(serverStatusFilterProvider);
+  final tagFilter = ref.watch(serverTagFilterProvider);
 
   if (serversState is! ServersLoaded) return [];
 
-  final servers = serversState.servers;
+  var servers = serversState.servers;
+
+  // Filter by status first
+  if (statusFilter != null) {
+    servers = servers.where((s) => s.status == statusFilter).toList();
+  }
+
+  // Filter by tag
+  if (tagFilter != null) {
+    servers = servers.where((s) => s.tags.contains(tagFilter)).toList();
+  }
+
+  // Then filter by query
   if (query.isEmpty) return servers;
 
   return servers.where((server) {
@@ -260,4 +293,45 @@ final filteredServersProvider = Provider<List<ServerWithMetrics>>((ref) {
     if (server.status.name.toLowerCase().contains(query)) return true;
     return false;
   }).toList();
+});
+
+/// Toggle for folder grouping view
+final folderGroupingEnabledProvider = StateProvider<bool>((ref) => false);
+
+/// All unique folders across all servers
+final allFoldersProvider = Provider<List<String>>((ref) {
+  final serversState = ref.watch(serversProvider);
+  if (serversState is! ServersLoaded) return [];
+
+  final folderSet = <String>{};
+  for (final server in serversState.servers) {
+    if (server.folder != null && server.folder!.isNotEmpty) {
+      folderSet.add(server.folder!);
+    }
+  }
+  final folders = folderSet.toList()..sort();
+  return folders;
+});
+
+/// Servers grouped by folder
+final serversGroupedByFolderProvider = Provider<Map<String, List<ServerWithMetrics>>>((ref) {
+  final servers = ref.watch(filteredServersProvider);
+  
+  final grouped = <String, List<ServerWithMetrics>>{};
+  
+  for (final server in servers) {
+    final folderName = server.folder ?? 'Ungrouped';
+    grouped.putIfAbsent(folderName, () => []);
+    grouped[folderName]!.add(server);
+  }
+  
+  // Sort folders alphabetically, but keep Ungrouped at the end
+  final sortedKeys = grouped.keys.toList()
+    ..sort((a, b) {
+      if (a == 'Ungrouped') return 1;
+      if (b == 'Ungrouped') return -1;
+      return a.compareTo(b);
+    });
+  
+  return {for (final key in sortedKeys) key: grouped[key]!};
 });

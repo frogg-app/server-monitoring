@@ -45,21 +45,16 @@ class SettingsPage extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // Key Management section
-          _SectionHeader(title: 'SSH Key Management'),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.vpn_key),
-                  title: const Text('Generate SSH Key'),
-                  subtitle: const Text('Create a new Ed25519 key pair'),
-                  trailing: const Icon(Icons.add),
-                  onTap: () => _showGenerateKeyDialog(context, ref),
-                ),
-              ],
+          _SectionHeader(
+            title: 'SSH Key Management',
+            action: IconButton(
+              icon: const Icon(Icons.add, size: 20),
+              onPressed: () => _showGenerateKeyDialog(context, ref),
+              tooltip: 'Generate new SSH key',
             ),
           ),
+          const SizedBox(height: 8),
+          const _SSHKeysList(),
           const SizedBox(height: 24),
 
           // Appearance section
@@ -465,6 +460,203 @@ class _NotificationChannelTile extends ConsumerWidget {
   }
 }
 
+/// SSH Keys list widget
+class _SSHKeysList extends ConsumerWidget {
+  const _SSHKeysList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final keysAsync = ref.watch(keysListProvider);
+    final theme = Theme.of(context);
+
+    return Card(
+      child: keysAsync.when(
+        loading: () => const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, color: theme.colorScheme.error),
+              const SizedBox(height: 8),
+              Text('Error loading keys: $error'),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => ref.invalidate(keysListProvider),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+        data: (keys) => keys.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.vpn_key_off,
+                      size: 48,
+                      color: theme.colorScheme.outline,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No SSH keys generated yet',
+                      style: theme.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Generate a key to connect to servers securely',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            : Column(
+                children: keys.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final key = entry.value;
+                  return Column(
+                    children: [
+                      if (index > 0) const Divider(height: 1),
+                      _SSHKeyTile(sshKey: key),
+                    ],
+                  );
+                }).toList(),
+              ),
+      ),
+    );
+  }
+}
+
+/// SSH Key tile widget
+class _SSHKeyTile extends ConsumerWidget {
+  final SSHKey sshKey;
+
+  const _SSHKeyTile({required this.sshKey});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    return ListTile(
+      leading: const Icon(Icons.vpn_key),
+      title: Text(sshKey.name),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${sshKey.keyType.toUpperCase()} • ${sshKey.fingerprint}',
+            style: theme.textTheme.bodySmall,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            'Created ${_formatDate(sshKey.createdAt)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+      isThreeLine: true,
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) => _handleMenuAction(context, ref, value),
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'copy',
+            child: Row(
+              children: [
+                Icon(Icons.copy, size: 20),
+                SizedBox(width: 8),
+                Text('Copy Public Key'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete, size: 20, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Delete', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) {
+      return 'today';
+    } else if (diff.inDays == 1) {
+      return 'yesterday';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} days ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
+  void _handleMenuAction(BuildContext context, WidgetRef ref, String action) {
+    switch (action) {
+      case 'copy':
+        Clipboard.setData(ClipboardData(text: sshKey.publicKey));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Public key copied to clipboard')),
+        );
+        break;
+      case 'delete':
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete SSH Key'),
+            content: Text('Are you sure you want to delete "${sshKey.name}"? This cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  try {
+                    final keyService = ref.read(keyServiceProvider);
+                    await keyService.deleteKey(sshKey.id);
+                    ref.invalidate(keysListProvider);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('SSH key deleted')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to delete key: $e'),
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                        ),
+                      );
+                    }
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+        break;
+    }
+  }
+}
+
 /// Add notification channel dialog
 class _AddNotificationChannelDialog extends ConsumerStatefulWidget {
   const _AddNotificationChannelDialog();
@@ -822,7 +1014,10 @@ class _GenerateKeyDialogState extends ConsumerState<_GenerateKeyDialog> {
       final keyService = ref.read(keyServiceProvider);
       final key = await keyService.generateKey(
         name: _nameController.text.trim(),
+        store: true, // Store the key in the backend
       );
+      // Refresh the keys list
+      ref.invalidate(keysListProvider);
       setState(() {
         _generatedKey = key;
         _isLoading = false;

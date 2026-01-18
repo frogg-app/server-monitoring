@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -44,6 +45,7 @@ func (h *ServerHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	servers, err := h.serverRepo.List(ctx, opts)
 	if err != nil {
+		log.Printf("Error listing servers: %v", err)
 		WriteError(w, http.StatusInternalServerError, "failed to list servers")
 		return
 	}

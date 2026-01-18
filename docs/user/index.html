@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse Server Monitoring - Documentation</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #0f0f23;
+            --surface: #1a1a2e;
+            --text: #e4e4e7;
+            --text-muted: #a1a1aa;
+            --border: #27273f;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .version {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-bottom: 32px;
+        }
+        
+        .nav-section {
+            margin-bottom: 24px;
+        }
+        
+        .nav-section h3 {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+        
+        .nav-link {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: background 0.2s;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+        
+        .main {
+            flex: 1;
+            margin-left: 280px;
+            padding: 48px;
+            max-width: 900px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+            color: var(--text);
+        }
+        
+        h2 {
+            font-size: 1.75rem;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            color: var(--text);
+        }
+        
+        h3 {
+            font-size: 1.25rem;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+        
+        p {
+            margin-bottom: 16px;
+            color: var(--text-muted);
+        }
+        
+        ul, ol {
+            margin-bottom: 16px;
+            padding-left: 24px;
+            color: var(--text-muted);
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        code {
+            background: var(--surface);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 0.875rem;
+            color: var(--primary);
+        }
+        
+        pre {
+            background: var(--surface);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text);
+        }
+        
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .card h3 {
+            margin-top: 0;
+            color: var(--text);
+        }
+        
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .feature-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .feature-item h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .feature-item p {
+            font-size: 0.875rem;
+            margin: 0;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .status-online { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .status-offline { background: rgba(239, 68, 68, 0.2); color: var(--error); }
+        .status-warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        
+        .tip {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 16px;
+        }
+        
+        .tip strong {
+            color: var(--primary);
+        }
+        
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 16px;
+        }
+        
+        .warning strong {
+            color: var(--warning);
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main {
+                margin-left: 0;
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="logo">Pulse</div>
+            <div class="version">Server Monitoring v1.0</div>
+            
+            <div class="nav-section">
+                <h3>Getting Started</h3>
+                <a href="#overview" class="nav-link active">Overview</a>
+                <a href="#quick-start" class="nav-link">Quick Start</a>
+                <a href="#requirements" class="nav-link">Requirements</a>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Servers</h3>
+                <a href="#adding-servers" class="nav-link">Adding Servers</a>
+                <a href="#server-status" class="nav-link">Status & Metrics</a>
+                <a href="#filtering" class="nav-link">Filtering & Tags</a>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Security</h3>
+                <a href="#ssh-keys" class="nav-link">SSH Keys</a>
+                <a href="#credentials" class="nav-link">Credentials</a>
+                <a href="#authentication" class="nav-link">Authentication</a>
+            </div>
+            
+            <div class="nav-section">
+                <h3>Monitoring</h3>
+                <a href="#alerts" class="nav-link">Alerts</a>
+                <a href="#containers" class="nav-link">Docker Containers</a>
+                <a href="#metrics" class="nav-link">Metrics</a>
+            </div>
+        </nav>
+        
+        <main class="main">
+            <h1 id="overview">Pulse Server Monitoring</h1>
+            <p>Pulse is a modern, self-hosted server monitoring solution that helps you keep track of your infrastructure health, Docker containers, and system metrics.</p>
+            
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <h4>📊 Real-time Metrics</h4>
+                    <p>Monitor CPU, memory, disk usage, and network across all your servers.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🐳 Docker Integration</h4>
+                    <p>Track container status, health, and resource consumption.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🔔 Smart Alerts</h4>
+                    <p>Configure threshold-based alerts with multiple notification channels.</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🔐 Secure by Design</h4>
+                    <p>Encrypted credential storage with SSH key support.</p>
+                </div>
+            </div>
+            
+            <h2 id="quick-start">Quick Start</h2>
+            <p>Get started with Pulse in just a few minutes:</p>
+            
+            <ol>
+                <li><strong>Login</strong> - Use your admin credentials to access the dashboard</li>
+                <li><strong>Add a Server</strong> - Click "Add Server" and enter your server details</li>
+                <li><strong>Configure Credentials</strong> - Add SSH credentials for your server</li>
+                <li><strong>Start Monitoring</strong> - View real-time metrics and container status</li>
+            </ol>
+            
+            <h2 id="requirements">Requirements</h2>
+            <p>Servers you want to monitor should have:</p>
+            <ul>
+                <li>SSH access (port 22 by default)</li>
+                <li>A user account with sudo access (optional, for some metrics)</li>
+                <li>Docker installed (optional, for container monitoring)</li>
+            </ul>
+            
+            <h2 id="adding-servers">Adding Servers</h2>
+            <p>To add a new server to monitoring:</p>
+            
+            <ol>
+                <li>Navigate to the <strong>Servers</strong> page</li>
+                <li>Click the <strong>+</strong> button in the top right</li>
+                <li>Fill in the server details:
+                    <ul>
+                        <li><code>Name</code> - A friendly name for the server</li>
+                        <li><code>Hostname/IP</code> - The server's address</li>
+                        <li><code>Port</code> - SSH port (default: 22)</li>
+                        <li><code>Description</code> - Optional notes</li>
+                        <li><code>Tags</code> - Comma-separated tags for organization</li>
+                        <li><code>Folder</code> - Group servers by folder</li>
+                        <li><code>Auth Method</code> - Password or SSH Key</li>
+                    </ul>
+                </li>
+                <li>Click <strong>Add</strong> to save</li>
+            </ol>
+            
+            <div class="tip">
+                <strong>Tip:</strong> Use tags like "production", "development", or "docker" to organize your servers and quickly filter them later.
+            </div>
+            
+            <h2 id="server-status">Status & Metrics</h2>
+            <p>Each server shows a real-time status indicator:</p>
+            
+            <ul>
+                <li><span class="status-badge status-online">Online</span> - Server is connected and responding</li>
+                <li><span class="status-badge status-offline">Offline</span> - Server is not reachable</li>
+                <li><span class="status-badge status-warning">Warning</span> - Server has high resource usage</li>
+            </ul>
+            
+            <h3>Available Metrics</h3>
+            <ul>
+                <li><strong>CPU Usage</strong> - Current processor utilization</li>
+                <li><strong>Memory Usage</strong> - RAM consumption percentage</li>
+                <li><strong>Disk Usage</strong> - Primary disk space utilization</li>
+                <li><strong>Uptime</strong> - Time since last boot</li>
+                <li><strong>Load Average</strong> - System load over 1, 5, 15 minutes</li>
+            </ul>
+            
+            <h2 id="filtering">Filtering & Tags</h2>
+            <p>Use the filter bar to quickly find servers:</p>
+            
+            <ul>
+                <li><strong>Search Box</strong> - Filter by name, hostname, or description</li>
+                <li><strong>Status Chips</strong> - Click to show only Online, Offline, or Warning servers</li>
+                <li><strong>Tag Chips</strong> - Click a tag to filter servers with that tag</li>
+                <li><strong>Folder View</strong> - Toggle the folder icon to group servers by folder</li>
+            </ul>
+            
+            <h2 id="ssh-keys">SSH Keys</h2>
+            <p>Pulse supports SSH key authentication for secure server access:</p>
+            
+            <h3>Generating a New Key</h3>
+            <ol>
+                <li>Go to <strong>Settings</strong></li>
+                <li>Find the <strong>SSH Keys</strong> section</li>
+                <li>Click <strong>Generate Key</strong></li>
+                <li>Enter a name for the key</li>
+                <li>Choose the key type (RSA 4096 or Ed25519)</li>
+                <li>Click <strong>Generate</strong></li>
+            </ol>
+            
+            <div class="warning">
+                <strong>Important:</strong> The private key is only shown once after generation. Copy it immediately and store it securely.
+            </div>
+            
+            <h3>Adding Keys to Servers</h3>
+            <p>After generating a key, add the public key to your server's <code>~/.ssh/authorized_keys</code> file:</p>
+            
+<pre><code>ssh-copy-id -i ~/.ssh/id_pulse user@server</code></pre>
+            
+            <p>Or manually append the public key to the file.</p>
+            
+            <h2 id="credentials">Credentials</h2>
+            <p>Credentials are stored encrypted and associated with servers:</p>
+            
+            <h3>Credential Types</h3>
+            <ul>
+                <li><strong>SSH Password</strong> - Username and password authentication</li>
+                <li><strong>SSH Key</strong> - Key-based authentication (more secure)</li>
+            </ul>
+            
+            <h3>Adding Credentials</h3>
+            <ol>
+                <li>Open a server's detail page</li>
+                <li>Navigate to the <strong>Credentials</strong> tab</li>
+                <li>Click <strong>Add Credential</strong></li>
+                <li>Choose the type and enter the details</li>
+                <li>Click <strong>Save</strong></li>
+            </ol>
+            
+            <h2 id="authentication">Authentication</h2>
+            <p>Pulse supports different authentication methods per server:</p>
+            
+            <ul>
+                <li><strong>Password</strong> - Traditional SSH password authentication</li>
+                <li><strong>SSH Key</strong> - Public/private key pair authentication</li>
+                <li><strong>None</strong> - For servers that don't require SSH (display only)</li>
+            </ul>
+            
+            <h2 id="alerts">Alerts</h2>
+            <p>Configure alerts to be notified when servers need attention:</p>
+            
+            <h3>Creating Alert Rules</h3>
+            <ol>
+                <li>Navigate to <strong>Alerts</strong></li>
+                <li>Click <strong>Create Rule</strong></li>
+                <li>Configure the rule:
+                    <ul>
+                        <li><code>Metric</code> - CPU, Memory, or Disk</li>
+                        <li><code>Operator</code> - Greater than, Less than, Equals</li>
+                        <li><code>Threshold</code> - The value to trigger the alert</li>
+                        <li><code>Severity</code> - Info, Warning, or Critical</li>
+                    </ul>
+                </li>
+                <li>Click <strong>Save</strong></li>
+            </ol>
+            
+            <h3>Notification Channels</h3>
+            <p>Alerts can be sent through various channels:</p>
+            <ul>
+                <li><strong>Email</strong> - SMTP email notifications</li>
+                <li><strong>Webhook</strong> - HTTP POST to custom endpoints</li>
+                <li><strong>Slack</strong> - Slack workspace integration</li>
+            </ul>
+            
+            <h2 id="containers">Docker Containers</h2>
+            <p>Monitor Docker containers running on your servers:</p>
+            
+            <h3>Container Status</h3>
+            <ul>
+                <li><strong>Running</strong> - Container is active</li>
+                <li><strong>Stopped</strong> - Container is not running</li>
+                <li><strong>Healthy</strong> - Container passed health checks</li>
+                <li><strong>Unhealthy</strong> - Container failed health checks</li>
+            </ul>
+            
+            <h3>Container Metrics</h3>
+            <ul>
+                <li>CPU usage per container</li>
+                <li>Memory consumption</li>
+                <li>Network I/O</li>
+                <li>Block I/O</li>
+            </ul>
+            
+            <h2 id="metrics">Metrics History</h2>
+            <p>View historical metrics for trend analysis:</p>
+            
+            <ul>
+                <li><strong>Time Range</strong> - Select 1 hour, 24 hours, 7 days, or 30 days</li>
+                <li><strong>Charts</strong> - Visual graphs for each metric type</li>
+                <li><strong>Export</strong> - Download metrics data for analysis</li>
+            </ul>
+            
+            <div class="card">
+                <h3>Need Help?</h3>
+                <p>For additional support or to report issues, please visit the project repository or contact your system administrator.</p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

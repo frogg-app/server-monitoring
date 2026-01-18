@@ -84,6 +84,77 @@ Contact / Questions
 If you're unsure about adding or removing a task, open a PR and request review from the repository maintainers.
 
 -------------------------
-New Tasks (added 2026-01-17)
+New Tasks
 -------------------------
+
+(No pending tasks)
+
+### TASK: TASK-0013 - Global credential pool
+
+- ID: TASK-0013
+- Status: not-started
+- Priority: P0
+- Owner: unassigned
+- Created: 2026-01-18
+- Files: app/lib/features/servers/pages/server_list_page.dart, app/lib/features/servers/providers/server_provider.dart, app/lib/features/settings/pages/settings_page.dart, service-node/internal/api/credential_handlers.go, service-node/internal/repository/credential_repository.go
+- Description: |
+  Implement a global credential pool so SSH keys and saved credentials are managed centrally. When adding or editing a server the UI should allow selecting an existing credential from the global pool. Adding a credential from a server flow should register it in the global pool. The pool must be encrypted/stored using existing vault mechanisms.
+- Acceptance Criteria: |
+  - Global Credentials page lists stored credentials (name, type, created_at)
+  - Add credential flow stores credential in the global pool and returns an ID
+  - Add/Edit Server dialogs allow selecting an existing credential from the global pool
+  - Adding a credential from a server detail view registers it in the global pool
+  - Stored credentials remain encrypted at rest (use vault)
+  - Integration tests cover create/list/select flows
+- Tests/Commands: |
+  - cd /home/codex/server-monitoring && python3 tests/integration_test.py
+  - Manual: Add credential in Settings > SSH Keys, then assign it to a server and verify connection/test succeeds
+- Notes: |
+  - Reuse existing key storage + vault encryption patterns
+  - Update API to return credential IDs for selection
+
+### TASK: TASK-0014 - Connect button on server page
+
+- ID: TASK-0014
+- Status: not-started
+- Priority: P1
+- Owner: unassigned
+- Created: 2026-01-18
+- Files: app/lib/features/servers/pages/server_list_page.dart, app/lib/features/servers/pages/server_detail_page.dart, app/lib/features/servers/providers/server_provider.dart, service-node/internal/api/server_handlers.go
+- Description: |
+  Add a prominent Connect button on server list cards and on each server's detail page when the server is not currently connected or has never connected. The button should trigger a connection test and provide immediate feedback (connecting, success, failure).
+- Acceptance Criteria: |
+  - Connect button visible on server cards for offline/never-connected servers
+  - Connect button visible on server detail page when not connected
+  - Clicking Connect runs the existing server connection/test API and shows status toast or inline indicator
+  - Successful connection updates server status in the UI
+  - Integration test for connection attempt and status update
+- Tests/Commands: |
+  - cd /home/codex/server-monitoring && python3 tests/integration_test.py
+  - Manual: Click Connect on an offline server and observe status change or failure message
+- Notes: |
+  - Use existing server test connection API (service-node)
+
+### TASK: TASK-0015 - Terminal interface using saved credential
+
+- ID: TASK-0015
+- Status: not-started
+- Priority: P0
+- Owner: unassigned
+- Created: 2026-01-18
+- Files: app/lib/features/servers/pages/server_detail_page.dart, app/lib/features/servers/widgets/terminal_widget.dart, app/lib/features/servers/providers/server_provider.dart, service-node/internal/api/ssh_handlers.go, service-node/internal/collector/docker.go
+- Description: |
+  Implement an in-browser terminal interface that leverages the server's selected saved credential to establish an SSH session. The terminal should be accessible from the server detail page via a Connect/Terminal button and reuse stored credentials from the global pool. The backend must proxy and broker the SSH session securely.
+- Acceptance Criteria: |
+  - Terminal button available on server detail pages for servers with an assigned credential
+  - Terminal UI opens in a modal or dedicated route and shows an interactive shell
+  - SSH session initiated using the saved credential (private key or password) and proxied via backend
+  - Session logs/errors are visible to the user; private keys are never exposed in logs or responses
+  - Integration test to open terminal, run a simple command (e.g., echo hello), and verify output
+- Tests/Commands: |
+  - cd /home/codex/server-monitoring && python3 tests/integration_test.py
+  - Manual: Open Terminal on a server and run `echo hello` to verify a working shell
+- Notes: |
+  - Consider leveraging websocket-based pty proxy on the backend
+  - Ensure vault encryption and careful handling of private keys; only the brokered backend process should access keys
 

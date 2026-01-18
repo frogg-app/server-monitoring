@@ -88,6 +88,8 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    volumes:
+      - ./docs/user:/usr/share/nginx/docs:ro
     ports:
       # Publish frontend on a fixed host port (override with WEB_PORT env)
       - "${WEB_PORT:-32200}:80"

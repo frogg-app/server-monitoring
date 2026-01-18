@@ -13,11 +13,22 @@ class ServerListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final serversState = ref.watch(serversProvider);
+    final allTags = ref.watch(allTagsProvider);
+    final hasFilterableTags = allTags.isNotEmpty;
+    final isGroupedView = ref.watch(folderGroupingEnabledProvider);
+    final allFolders = ref.watch(allFoldersProvider);
+    final hasFolders = allFolders.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servers'),
         actions: [
+          if (hasFolders)
+            IconButton(
+              icon: Icon(isGroupedView ? Icons.view_list : Icons.folder_open),
+              onPressed: () => ref.read(folderGroupingEnabledProvider.notifier).state = !isGroupedView,
+              tooltip: isGroupedView ? 'List view' : 'Group by folder',
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => ref.read(serversProvider.notifier).refresh(),
@@ -30,10 +41,23 @@ class ServerListPage extends ConsumerWidget {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: _SearchField(),
+          preferredSize: Size.fromHeight(hasFilterableTags ? 140 : 100),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: _SearchField(),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: _StatusFilterChips(),
+              ),
+              if (hasFilterableTags)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: _TagFilterChips(),
+                ),
+            ],
           ),
         ),
       ),
@@ -43,7 +67,9 @@ class ServerListPage extends ConsumerWidget {
             message: msg,
             onRetry: () => ref.read(serversProvider.notifier).refresh(),
           ),
-        ServersLoaded() => const _FilteredServerListView(),
+        ServersLoaded() => isGroupedView 
+            ? const _GroupedServerListView() 
+            : const _FilteredServerListView(),
       },
     );
   }
@@ -84,6 +110,170 @@ class _SearchField extends ConsumerWidget {
       ),
       onChanged: (value) =>
           ref.read(serverFilterQueryProvider.notifier).state = value,
+    );
+  }
+}
+
+/// Status filter chips
+class _StatusFilterChips extends ConsumerWidget {
+  const _StatusFilterChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedStatus = ref.watch(serverStatusFilterProvider);
+    final serversState = ref.watch(serversProvider);
+    
+    // Get server counts for each status
+    final counts = <ServerStatus, int>{};
+    if (serversState is ServersLoaded) {
+      for (final server in serversState.servers) {
+        counts[server.status] = (counts[server.status] ?? 0) + 1;
+      }
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _StatusChip(
+            label: 'All',
+            count: serversState is ServersLoaded ? serversState.servers.length : 0,
+            isSelected: selectedStatus == null,
+            onTap: () => ref.read(serverStatusFilterProvider.notifier).state = null,
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Online',
+            count: counts[ServerStatus.online] ?? 0,
+            isSelected: selectedStatus == ServerStatus.online,
+            color: Colors.green,
+            onTap: () => ref.read(serverStatusFilterProvider.notifier).state = ServerStatus.online,
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Offline',
+            count: counts[ServerStatus.offline] ?? 0,
+            isSelected: selectedStatus == ServerStatus.offline,
+            color: Colors.red,
+            onTap: () => ref.read(serverStatusFilterProvider.notifier).state = ServerStatus.offline,
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Warning',
+            count: counts[ServerStatus.warning] ?? 0,
+            isSelected: selectedStatus == ServerStatus.warning,
+            color: Colors.orange,
+            onTap: () => ref.read(serverStatusFilterProvider.notifier).state = ServerStatus.warning,
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Unknown',
+            count: counts[ServerStatus.unknown] ?? 0,
+            isSelected: selectedStatus == ServerStatus.unknown,
+            color: Colors.grey,
+            onTap: () => ref.read(serverStatusFilterProvider.notifier).state = ServerStatus.unknown,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Individual status filter chip
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final bool isSelected;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _StatusChip({
+    required this.label,
+    required this.count,
+    required this.isSelected,
+    this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final chipColor = color ?? theme.colorScheme.primary;
+
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (color != null) ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: chipColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(label),
+          if (count > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              '($count)',
+              style: TextStyle(
+                fontSize: 11,
+                color: isSelected
+                    ? theme.colorScheme.onPrimary.withOpacity(0.7)
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (_) => onTap(),
+      selectedColor: chipColor.withOpacity(0.3),
+      checkmarkColor: chipColor,
+      showCheckmark: false,
+    );
+  }
+}
+
+/// Tag filter chips for filtering by server tags
+class _TagFilterChips extends ConsumerWidget {
+  const _TagFilterChips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedTag = ref.watch(serverTagFilterProvider);
+    final allTags = ref.watch(allTagsProvider);
+    final theme = Theme.of(context);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Icon(Icons.label_outline, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('All Tags'),
+            selected: selectedTag == null,
+            onSelected: (_) => ref.read(serverTagFilterProvider.notifier).state = null,
+            showCheckmark: false,
+          ),
+          const SizedBox(width: 8),
+          ...allTags.map((tag) => Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text(tag),
+              selected: selectedTag == tag,
+              onSelected: (_) => ref.read(serverTagFilterProvider.notifier).state = 
+                  selectedTag == tag ? null : tag,
+              showCheckmark: false,
+            ),
+          )),
+        ],
+      ),
     );
   }
 }
@@ -134,6 +324,105 @@ class _FilteredServerListView extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _ServerCard(server: servers[index]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Grouped server list view (by folder)
+class _GroupedServerListView extends ConsumerWidget {
+  const _GroupedServerListView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groupedServers = ref.watch(serversGroupedByFolderProvider);
+    final query = ref.watch(serverFilterQueryProvider);
+    final theme = Theme.of(context);
+
+    if (groupedServers.isEmpty && query.isEmpty) {
+      return const _EmptyServerList();
+    }
+
+    if (groupedServers.isEmpty && query.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(height: 16),
+            Text(
+              'No servers match "$query"',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () =>
+                  ref.read(serverFilterQueryProvider.notifier).state = '',
+              child: const Text('Clear filter'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.read(serversProvider.notifier).refresh();
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: groupedServers.length,
+        itemBuilder: (context, index) {
+          final folderName = groupedServers.keys.elementAt(index);
+          final servers = groupedServers[folderName]!;
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (index > 0) const SizedBox(height: 16),
+              // Folder header
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      folderName == 'Ungrouped' ? Icons.folder_off_outlined : Icons.folder,
+                      size: 20,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      folderName,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${servers.length}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Server cards in this folder
+              ...servers.map((server) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _ServerCard(server: server),
+              )),
+            ],
           );
         },
       ),
@@ -625,6 +914,8 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
   final _portController = TextEditingController(text: '22');
   final _descriptionController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _folderController = TextEditingController();
+  AuthMethod _authMethod = AuthMethod.password;
   bool _isLoading = false;
 
   @override
@@ -634,6 +925,7 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
     _portController.dispose();
     _descriptionController.dispose();
     _tagsController.dispose();
+    _folderController.dispose();
     super.dispose();
   }
 
@@ -645,73 +937,115 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
         width: 400,
         child: Form(
           key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'My Server',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    hintText: 'My Server',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a name';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _hostnameController,
-                decoration: const InputDecoration(
-                  labelText: 'Hostname / IP',
-                  hintText: '192.168.1.100',
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _hostnameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Hostname / IP',
+                    hintText: '192.168.1.100',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a hostname or IP';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a hostname or IP';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _portController,
-                decoration: const InputDecoration(
-                  labelText: 'SSH Port',
-                  hintText: '22',
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _portController,
+                  decoration: const InputDecoration(
+                    labelText: 'SSH Port',
+                    hintText: '22',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a port';
+                    }
+                    final port = int.tryParse(value);
+                    if (port == null || port < 1 || port > 65535) {
+                      return 'Please enter a valid port (1-65535)';
+                    }
+                    return null;
+                  },
                 ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a port';
-                  }
-                  final port = int.tryParse(value);
-                  if (port == null || port < 1 || port > 65535) {
-                    return 'Please enter a valid port (1-65535)';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description (optional)',
-                  hintText: 'Web server in living room',
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    hintText: 'Web server in living room',
+                  ),
+                  maxLines: 2,
                 ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _tagsController,
-                decoration: const InputDecoration(
-                  labelText: 'Tags (comma-separated)',
-                  hintText: 'production, web, docker',
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _tagsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Tags (comma-separated)',
+                    hintText: 'production, web, docker',
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _folderController,
+                  decoration: const InputDecoration(
+                    labelText: 'Folder (optional)',
+                    hintText: 'Home Lab / Production',
+                    prefixIcon: Icon(Icons.folder_outlined),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<AuthMethod>(
+                  value: _authMethod,
+                  decoration: const InputDecoration(
+                    labelText: 'Authentication Method',
+                  ),
+                  items: AuthMethod.values.map((method) {
+                    return DropdownMenuItem(
+                      value: method,
+                      child: Row(
+                        children: [
+                          Icon(
+                            method == AuthMethod.sshKey
+                                ? Icons.vpn_key
+                                : method == AuthMethod.password
+                                    ? Icons.password
+                                    : Icons.block,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(method.displayName),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => _authMethod = value);
+                    }
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -746,6 +1080,8 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
           ? <String>[]
           : tagsText.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
+      final folderText = _folderController.text.trim();
+
       final request = CreateServerRequest(
         name: _nameController.text.trim(),
         hostname: _hostnameController.text.trim(),
@@ -754,6 +1090,8 @@ class _AddServerDialogState extends ConsumerState<_AddServerDialog> {
             ? null
             : _descriptionController.text.trim(),
         tags: tags.isEmpty ? null : tags,
+        folder: folderText.isEmpty ? null : folderText,
+        authMethod: _authMethod,
       );
 
       await ref.read(serversProvider.notifier).createServer(request);
@@ -794,6 +1132,8 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
   late final TextEditingController _portController;
   late final TextEditingController _descriptionController;
   late final TextEditingController _tagsController;
+  late final TextEditingController _folderController;
+  late AuthMethod _authMethod;
   bool _isLoading = false;
 
   @override
@@ -804,6 +1144,8 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
     _portController = TextEditingController(text: widget.server.port.toString());
     _descriptionController = TextEditingController(text: widget.server.description ?? '');
     _tagsController = TextEditingController(text: widget.server.tags.join(', '));
+    _folderController = TextEditingController(text: widget.server.folder ?? '');
+    _authMethod = widget.server.authMethod;
   }
 
   @override
@@ -813,6 +1155,7 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
     _portController.dispose();
     _descriptionController.dispose();
     _tagsController.dispose();
+    _folderController.dispose();
     super.dispose();
   }
 
@@ -890,6 +1233,46 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
                   hintText: 'production, web, docker',
                 ),
               ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _folderController,
+                decoration: const InputDecoration(
+                  labelText: 'Folder (optional)',
+                  hintText: 'Home Lab / Production',
+                  prefixIcon: Icon(Icons.folder_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<AuthMethod>(
+                value: _authMethod,
+                decoration: const InputDecoration(
+                  labelText: 'Authentication Method',
+                ),
+                items: AuthMethod.values.map((method) {
+                  return DropdownMenuItem(
+                    value: method,
+                    child: Row(
+                      children: [
+                        Icon(
+                          method == AuthMethod.sshKey
+                              ? Icons.vpn_key
+                              : method == AuthMethod.password
+                                  ? Icons.password
+                                  : Icons.block,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(method.displayName),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _authMethod = value);
+                  }
+                },
+              ),
             ],
           ),
         ),
@@ -925,6 +1308,8 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
           ? <String>[]
           : tagsText.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
 
+      final folderText = _folderController.text.trim();
+
       final request = UpdateServerRequest(
         name: _nameController.text.trim(),
         hostname: _hostnameController.text.trim(),
@@ -933,6 +1318,8 @@ class _EditServerDialogState extends ConsumerState<_EditServerDialog> {
             ? null
             : _descriptionController.text.trim(),
         tags: tags,
+        folder: folderText.isEmpty ? null : folderText,
+        authMethod: _authMethod,
       );
 
       await ref.read(serversProvider.notifier).updateServer(widget.server.id, request);

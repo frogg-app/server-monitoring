@@ -129,8 +129,8 @@ func (h *KeyHandler) GenerateKey(w http.ResponseWriter, r *http.Request) {
 		}
 
 		response.ID = keyPair.ID.String()
-		// Don't return private key if stored
-		response.PrivateKey = ""
+		// Return private key once at generation time so user can save it
+		response.PrivateKey = privateKey
 	} else {
 		// Return private key only if not storing
 		response.PrivateKey = privateKey

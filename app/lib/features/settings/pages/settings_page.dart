@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/providers.dart';
+import '../../../app/widgets/widgets.dart';
 import '../../auth/auth.dart';
 import '../../alerts/alerts.dart';
 import '../providers/providers.dart';
@@ -20,6 +21,9 @@ class SettingsPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
+        actions: const [
+          MobileLogoutButton(),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),

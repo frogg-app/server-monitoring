@@ -105,6 +105,40 @@ class PulseTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+
+      // Modern bottom navigation bar (for mobile)
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: PulseColors.darkSurface,
+        indicatorColor: PulseColors.accent.withOpacity(0.15),
+        elevation: 0,
+        height: 64,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: PulseColors.accent,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            );
+          }
+          return TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(
+              color: PulseColors.accent,
+              size: 24,
+            );
+          }
+          return IconThemeData(
+            color: Colors.grey[600],
+            size: 24,
+          );
+        }),
+      ),
       
       // Modern input fields
       inputDecorationTheme: InputDecorationTheme(
@@ -304,6 +338,40 @@ class PulseTheme {
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+      ),
+
+      // Bottom navigation bar (for mobile)
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: PulseColors.lightSurface,
+        indicatorColor: PulseColors.accent.withOpacity(0.1),
+        elevation: 0,
+        height: 64,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: PulseColors.accent,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            );
+          }
+          return TextStyle(
+            color: Colors.grey[600],
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(
+              color: PulseColors.accent,
+              size: 24,
+            );
+          }
+          return IconThemeData(
+            color: Colors.grey[600],
+            size: 24,
+          );
+        }),
       ),
       
       // Input fields

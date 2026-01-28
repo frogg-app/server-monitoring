@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/widgets/widgets.dart';
 import '../models/models.dart';
 import '../providers/providers.dart';
 import '../repositories/server_repository.dart';
@@ -101,6 +102,7 @@ class ServerDetailPage extends ConsumerWidget {
               ),
             ],
           ),
+          const MobileLogoutButton(),
         ],
       ),
       body: switch (serverState) {

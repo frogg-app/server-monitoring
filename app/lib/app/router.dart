@@ -7,6 +7,7 @@ import '../features/alerts/alerts.dart';
 import '../features/auth/auth.dart';
 import '../features/servers/servers.dart';
 import '../features/settings/settings.dart';
+import 'widgets/widgets.dart';
 
 /// Router configuration with auth redirects
 final routerProvider = Provider<GoRouter>((ref) {
@@ -304,12 +305,7 @@ class DashboardContent extends ConsumerWidget {
             onPressed: () => ref.read(serversProvider.notifier).refresh(),
             tooltip: 'Refresh',
           ),
-          if (isMobile)
-            IconButton(
-              icon: const Icon(Icons.logout),
-              onPressed: () => ref.read(authProvider.notifier).logout(),
-              tooltip: 'Logout',
-            ),
+          const MobileLogoutButton(),
         ],
       ),
       body: SingleChildScrollView(

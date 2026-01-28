@@ -81,3 +81,5 @@ backups/
 # Generated API clients
 /app/lib/core/api/generated/
 /shared/generated/
+.env
+*.env

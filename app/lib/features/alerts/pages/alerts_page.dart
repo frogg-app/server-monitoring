@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/widgets/widgets.dart';
 import '../models/models.dart';
 import '../providers/alert_provider.dart';
 
@@ -45,6 +46,7 @@ class _AlertsPageState extends ConsumerState<AlertsPage>
             },
             tooltip: 'Refresh',
           ),
+          const MobileLogoutButton(),
         ],
         bottom: TabBar(
           controller: _tabController,

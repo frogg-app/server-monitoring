@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shimmer/shimmer.dart';
 
+import '../../../app/widgets/widgets.dart';
 import '../models/models.dart';
 import '../providers/providers.dart';
 
@@ -39,6 +40,7 @@ class ServerListPage extends ConsumerWidget {
             onPressed: () => _showAddServerDialog(context, ref),
             tooltip: 'Add Server',
           ),
+          const MobileLogoutButton(),
         ],
         bottom: PreferredSize(
           preferredSize: Size.fromHeight(hasFilterableTags ? 140 : 100),

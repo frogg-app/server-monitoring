@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/utils/responsive.dart';
 import '../features/alerts/alerts.dart';
 import '../features/auth/auth.dart';
 import '../features/servers/servers.dart';
@@ -143,7 +144,7 @@ class _AuthRefreshListenable extends ChangeNotifier {
   final Ref _ref;
 }
 
-/// Dashboard shell with navigation rail
+/// Dashboard shell with responsive navigation
 class DashboardShell extends ConsumerWidget {
   final Widget child;
 
@@ -153,6 +154,7 @@ class DashboardShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentLocation = GoRouterState.of(context).matchedLocation;
     final theme = Theme.of(context);
+    final isMobile = context.isMobile;
     
     int selectedIndex = 0;
     if (currentLocation.startsWith('/servers')) {
@@ -163,23 +165,59 @@ class DashboardShell extends ConsumerWidget {
       selectedIndex = 3;
     }
 
+    void onDestinationSelected(int index) {
+      switch (index) {
+        case 0:
+          context.go('/');
+        case 1:
+          context.go('/servers');
+        case 2:
+          context.go('/alerts');
+        case 3:
+          context.go('/settings');
+      }
+    }
+
+    // Mobile layout with bottom navigation
+    if (isMobile) {
+      return Scaffold(
+        body: child,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: selectedIndex,
+          onDestinationSelected: onDestinationSelected,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined),
+              selectedIcon: Icon(Icons.dashboard),
+              label: 'Dashboard',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.dns_outlined),
+              selectedIcon: Icon(Icons.dns),
+              label: 'Servers',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.notifications_outlined),
+              selectedIcon: Icon(Icons.notifications),
+              label: 'Alerts',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.settings_outlined),
+              selectedIcon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Desktop/tablet layout with navigation rail
     return Scaffold(
       body: Row(
         children: [
           NavigationRail(
             selectedIndex: selectedIndex,
-            onDestinationSelected: (index) {
-              switch (index) {
-                case 0:
-                  context.go('/');
-                case 1:
-                  context.go('/servers');
-                case 2:
-                  context.go('/alerts');
-                case 3:
-                  context.go('/settings');
-              }
-            },
+            onDestinationSelected: onDestinationSelected,
             labelType: NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -255,6 +293,7 @@ class DashboardContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final serversState = ref.watch(serversProvider);
+    final isMobile = context.isMobile;
 
     return Scaffold(
       appBar: AppBar(
@@ -265,15 +304,21 @@ class DashboardContent extends ConsumerWidget {
             onPressed: () => ref.read(serversProvider.notifier).refresh(),
             tooltip: 'Refresh',
           ),
+          if (isMobile)
+            IconButton(
+              icon: const Icon(Icons.logout),
+              onPressed: () => ref.read(authProvider.notifier).logout(),
+              tooltip: 'Logout',
+            ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: context.responsivePadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Status summary cards
-            _buildStatusSummary(context, serversState),
+            _buildStatusSummary(context, serversState, isMobile),
             const SizedBox(height: 24),
             // Quick actions
             Text(
@@ -283,34 +328,65 @@ class DashboardContent extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _QuickActionCard(
-                  icon: Icons.add,
-                  label: 'Add Server',
-                  onTap: () => context.go('/servers'),
-                ),
-                _QuickActionCard(
-                  icon: Icons.notifications_active,
-                  label: 'View Alerts',
-                  onTap: () => context.go('/alerts'),
-                ),
-                _QuickActionCard(
-                  icon: Icons.settings,
-                  label: 'Settings',
-                  onTap: () => context.go('/settings'),
-                ),
-              ],
-            ),
+            _buildQuickActions(context, isMobile),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusSummary(BuildContext context, ServersState state) {
+  Widget _buildQuickActions(BuildContext context, bool isMobile) {
+    if (isMobile) {
+      // Stack vertically on mobile
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _QuickActionCard(
+            icon: Icons.add,
+            label: 'Add Server',
+            onTap: () => context.go('/servers'),
+          ),
+          const SizedBox(height: 12),
+          _QuickActionCard(
+            icon: Icons.notifications_active,
+            label: 'View Alerts',
+            onTap: () => context.go('/alerts'),
+          ),
+          const SizedBox(height: 12),
+          _QuickActionCard(
+            icon: Icons.settings,
+            label: 'Settings',
+            onTap: () => context.go('/settings'),
+          ),
+        ],
+      );
+    }
+
+    // Wrap on desktop/tablet
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        _QuickActionCard(
+          icon: Icons.add,
+          label: 'Add Server',
+          onTap: () => context.go('/servers'),
+        ),
+        _QuickActionCard(
+          icon: Icons.notifications_active,
+          label: 'View Alerts',
+          onTap: () => context.go('/alerts'),
+        ),
+        _QuickActionCard(
+          icon: Icons.settings,
+          label: 'Settings',
+          onTap: () => context.go('/settings'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusSummary(BuildContext context, ServersState state, bool isMobile) {
     if (state is ServersLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -325,6 +401,35 @@ class DashboardContent extends ConsumerWidget {
     }
 
     if (state is ServersLoaded) {
+      if (isMobile) {
+        // Stack vertically on mobile
+        return Column(
+          children: [
+            _SummaryCard(
+              title: 'Total Servers',
+              value: state.totalCount.toString(),
+              icon: Icons.dns,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            _SummaryCard(
+              title: 'Online',
+              value: state.onlineCount.toString(),
+              icon: Icons.check_circle,
+              color: Colors.green,
+            ),
+            const SizedBox(height: 16),
+            _SummaryCard(
+              title: 'Offline',
+              value: state.offlineCount.toString(),
+              icon: Icons.cancel,
+              color: Colors.red,
+            ),
+          ],
+        );
+      }
+
+      // Horizontal on desktop/tablet
       return Row(
         children: [
           Expanded(

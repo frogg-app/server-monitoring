@@ -6,6 +6,30 @@ This directory contains visual documentation for the Pulse Server Monitoring app
 
 - **VISUAL_DOCUMENTATION.md** - Comprehensive ASCII art diagrams showing all pages in mobile and desktop views
 - **mockup.html** - Interactive HTML mockup demonstrating the responsive design
+- **PNG Screenshots** - Actual visual representations of the redesigned UI
+
+## Screenshots
+
+### Login Page
+
+**Desktop (1920x1080)**
+![Login Desktop](login-desktop.png)
+
+**Mobile (375x667)**
+![Login Mobile](login-mobile.png)
+
+### Dashboard
+
+**Desktop (1920x1080)**
+![Dashboard Desktop](dashboard-desktop.png)
+
+**Mobile (375x667)**
+![Dashboard Mobile](dashboard-mobile.png)
+
+### Servers List
+
+**Desktop (1920x1080)**
+![Servers Desktop](servers-desktop.png)
 
 ## Viewing the Interactive Mockup
 

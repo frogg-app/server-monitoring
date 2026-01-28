@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../utils/responsive.dart';
+import '../../core/utils/responsive.dart';
 import '../../features/auth/auth.dart';
 
 /// Mobile logout button for app bars

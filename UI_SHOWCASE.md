@@ -457,7 +457,7 @@ cd ..
 docker compose up -d
 
 # 3. Visit the app
-open http://localhost:32200
+open http://localhost:5030
 ```
 
 **Expected behavior:**

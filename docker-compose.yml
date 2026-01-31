@@ -68,7 +68,7 @@ services:
       COLLECTION_INTERVAL: ${COLLECTION_INTERVAL:-30s}
       RETENTION_DAYS: ${RETENTION_DAYS:-30}
     ports:
-      - "${API_PORT:-32201}:8080"
+      - "${API_PORT:-5031}:8080"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
@@ -92,7 +92,7 @@ services:
       - ./docs/user:/usr/share/nginx/docs:ro
     ports:
       # Publish frontend on a fixed host port (override with WEB_PORT env)
-      - "${WEB_PORT:-32200}:80"
+      - "${WEB_PORT:-5030}:80"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
       interval: 30s

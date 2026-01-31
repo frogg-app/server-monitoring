@@ -217,7 +217,7 @@ cd app && flutter build web
 docker compose up -d
 
 # Visit
-open http://localhost:32200
+open http://localhost:5030
 ```
 
 ### Use Components

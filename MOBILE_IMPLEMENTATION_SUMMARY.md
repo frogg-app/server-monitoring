@@ -174,7 +174,7 @@ Test at these key breakpoints:
 docker compose up -d
 
 # Access the app
-# Desktop: http://localhost:32200
+# Desktop: http://localhost:5030
 # Mobile: Use Chrome DevTools device toolbar
 ```
 

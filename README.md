@@ -46,7 +46,7 @@ cd pulse
 # Run the setup script
 ./deploy/setup.sh
 
-# Access the web UI at http://localhost:32200
+# Access the web UI at http://localhost:5030
 ```
 
 The setup script will:
@@ -82,7 +82,7 @@ VAULT_KEY=<generate-32-char-secret>
 # Default: 0.0.0.0:8080
 #
 # Frontend host port (override with WEB_PORT in .env)
-# Example: WEB_PORT=32200
+# Example: WEB_PORT=5030
 #
 # Server
 PORT=8080
@@ -90,7 +90,7 @@ LOG_LEVEL=info
 
 # Frontend (web) host port published by Docker Compose
 # Override with `WEB_PORT` in your `.env` if needed
-WEB_PORT=32200
+WEB_PORT=5030
 ```
 
 3. **Start services:**
@@ -104,8 +104,8 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 4. **Access the application:**
-  - Web UI: http://localhost:32200
-  - API: http://localhost:32201/api/v1
+  - Web UI: http://localhost:5030
+  - API: http://localhost:5031/api/v1
 
 ### Default Credentials
 
@@ -120,7 +120,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 - Go 1.22+
 - Flutter 3.x
-PORT=32200
+PORT=5030
 - Docker (optional)
 
 ### Backend Development
@@ -357,7 +357,7 @@ docker compose exec db psql -U pulse -c "SELECT 1"
 docker compose logs api
 
 # Verify health endpoint
-curl http://localhost:32201/api/v1/health
+curl http://localhost:5031/api/v1/health
 ```
 
 ### Container Not Starting

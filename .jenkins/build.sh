@@ -1,16 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "=== Building server-monitoring ==="
+# =============================================================================
+# Pulse (Server Monitoring) Build Script (Docker Compose multi-service project)
+# =============================================================================
 
-# Set required environment variables for build
-export POSTGRES_PASSWORD=build-only-password
-export JWT_SECRET=build-only-jwt-secret-min-32-chars
-export VAULT_KEY=build-only-vault-key-min-32-chars
+echo "=== Building Pulse (docker-compose) ==="
 
-# Build using Makefile
-make build
+# Build all services with docker compose
+docker compose build --no-cache
 
-# Configure git
+# Tag the built images for versioning
+docker tag pulse-api:latest pulse-api:${VERSION:-latest}
+docker tag pulse-api:latest pulse-api:${ENVIRONMENT:-dev}
+docker tag pulse-web:latest pulse-web:${VERSION:-latest}
+docker tag pulse-web:latest pulse-web:${ENVIRONMENT:-dev}
 
 echo "Build completed successfully!"

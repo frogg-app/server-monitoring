@@ -49,7 +49,7 @@ docker run -d \
 
 # Wait for database
 echo "Waiting for database..."
-sleep 15
+sleep 20
 
 # Start API
 docker run -d \
@@ -69,7 +69,7 @@ docker run -d \
 
 # Wait for API
 echo "Waiting for API..."
-sleep 10
+sleep 15
 
 # Start Web
 docker run -d \
@@ -85,8 +85,8 @@ REMOTE
     rm -f /tmp/pulse-api.tar /tmp/pulse-web.tar
 else
     echo ">>> Deploying locally for dev"
+    export COMPOSE_PROJECT_NAME=pulse
     
-    # Just use docker compose for local dev deployment
     docker compose down || true
     docker compose up -d
 fi

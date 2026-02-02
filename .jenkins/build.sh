@@ -7,13 +7,15 @@ set -e
 
 echo "=== Building Pulse (docker-compose) ==="
 
+# Set compose project name to avoid directory-based naming
+export COMPOSE_PROJECT_NAME=pulse
+
 # Build all services with docker compose
 docker compose build --no-cache
 
-# Tag the built images for versioning
+# The built images will be named pulse-api and pulse-web
+# Tag them for deployment
 docker tag pulse-api:latest pulse-api:${VERSION:-latest}
-docker tag pulse-api:latest pulse-api:${ENVIRONMENT:-dev}
 docker tag pulse-web:latest pulse-web:${VERSION:-latest}
-docker tag pulse-web:latest pulse-web:${ENVIRONMENT:-dev}
 
 echo "Build completed successfully!"

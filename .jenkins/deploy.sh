@@ -39,6 +39,7 @@ docker volume create pulse_postgres_data 2>/dev/null || true
 docker run -d \
   --name pulse-db \
   --network pulse-network \
+  --network-alias db \
   -p 32202:5432 \
   -v pulse_postgres_data:/var/lib/postgresql/data \
   -e POSTGRES_DB=pulse \
@@ -51,12 +52,13 @@ docker run -d \
 echo "Waiting for database..."
 sleep 20
 
-# Start API
+# Start API with network alias 'api' for nginx to find
 docker run -d \
   --name pulse-api \
   --network pulse-network \
+  --network-alias api \
   -p 5031:8080 \
-  -e DATABASE_URL=postgres://pulse:pulse_prod_password@pulse-db:5432/pulse?sslmode=disable \
+  -e DATABASE_URL=postgres://pulse:pulse_prod_password@db:5432/pulse?sslmode=disable \
   -e PORT=8080 \
   -e BIND_ADDR=0.0.0.0:8080 \
   -e ENV=production \
